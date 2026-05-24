@@ -235,7 +235,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
                 <tr className="grand-total">
                   <td><strong>GRAND TOTAL</strong></td>
-                  <td style={{ textAlign: 'right' }}></td>
+                  <td style={{ textAlign: 'right' }}>
+                    <strong>{data.grand_total.budget ? formatNumber(data.grand_total.budget) : ''}</strong>
+                  </td>
                   <td style={{ textAlign: 'right' }}>
                     <strong>{formatNumber(data.grand_total.this_month)}</strong>
                   </td>
