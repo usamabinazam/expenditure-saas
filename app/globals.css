@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+}
+
+/* PDF specific styles */
+.pdf-content {
+  font-family: 'Times New Roman', serif;
+  color: #000;
+  background: white;
+  padding: 20mm;
+  width: 210mm;
+  min-height: 297mm;
+  box-sizing: border-box;
+}
+
+.pdf-content table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.pdf-content th,
+.pdf-content td {
+  border: 1px solid #000;
+  padding: 4px 6px;
+  font-size: 10pt;
+}
+
+.pdf-content th {
+  background: #d0d0d0;
+  font-weight: bold;
+  text-align: center;
+}
+
+.pdf-content .section-divider {
+  background: #000 !important;
+  color: white !important;
+  font-weight: bold;
+  text-align: center;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.pdf-content .subtotal {
+  background: #b8b8b8 !important;
+  font-weight: bold;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.pdf-content .grand-total {
+  background: #000 !important;
+  color: white !important;
+  font-weight: bold;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
