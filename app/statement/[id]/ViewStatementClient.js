@@ -11,6 +11,32 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
   const data = statement.data;
 
+  // ============================================================
+  // AUTO-FIT TO ONE A4 PAGE
+  // Yeh function content ki height check karta hai aur scale calculate karta hai
+  // ============================================================
+  const calculateScaleFactor = (element) => {
+    // A4 page dimensions in pixels (at 96 DPI)
+    // A4 = 210mm x 297mm
+    // Usable height with 15mm margins = 297 - 30 = 267mm = ~1010 pixels
+    const A4_USABLE_HEIGHT_PX = 1010;
+
+    // Get actual content height
+    const contentHeight = element.scrollHeight;
+
+    // If content fits, no scaling needed
+    if (contentHeight <= A4_USABLE_HEIGHT_PX) {
+      return 1.0;
+    }
+
+    // Calculate scale to fit
+    // Subtract small buffer (20px) to ensure proper fit
+    const scale = (A4_USABLE_HEIGHT_PX - 20) / contentHeight;
+
+    // Don't go below 50% (would be unreadable)
+    return Math.max(0.5, scale);
+  };
+
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
@@ -18,15 +44,45 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       const element = document.getElementById('pdfContent');
       const filename = `Expenditure_${statement.month_name}_${statement.year}.pdf`;
 
+      // Calculate dynamic scale to fit one page
+      const scale = calculateScaleFactor(element);
+
+      // Apply scaling temporarily
+      const originalTransform = element.style.transform;
+      const originalTransformOrigin = element.style.transformOrigin;
+      const originalWidth = element.style.width;
+
+      if (scale < 1.0) {
+        element.style.transform = `scale(${scale})`;
+        element.style.transformOrigin = 'top left';
+        element.style.width = `${100 / scale}%`;
+      }
+
       const opt = {
         margin: 0,
         filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          // Ensure full content captured even after scaling
+          windowHeight: element.scrollHeight,
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait',
+        },
+        // CRITICAL: prevent splitting onto multiple pages
+        pagebreak: { mode: 'avoid-all' },
       };
 
       await html2pdf().set(opt).from(element).save();
+
+      // Restore original styles
+      element.style.transform = originalTransform;
+      element.style.transformOrigin = originalTransformOrigin;
+      element.style.width = originalWidth;
     } catch (err) {
       alert('PDF generation failed: ' + err.message);
     } finally {
@@ -35,25 +91,52 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   };
 
   const handlePrint = () => {
-    const printContent = document.getElementById('pdfContent').innerHTML;
+    const element = document.getElementById('pdfContent');
+    const scale = calculateScaleFactor(element);
+    const printContent = element.innerHTML;
     const printWindow = window.open('', '_blank');
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
           <title>Print Statement</title>
           <style>
-            body { font-family: 'Times New Roman', serif; color: #000; margin: 20mm; }
+            @page { 
+              size: A4; 
+              margin: 15mm; 
+            }
+            html, body { 
+              margin: 0; 
+              padding: 0;
+            }
+            body { 
+              font-family: 'Times New Roman', serif; 
+              color: #000;
+            }
+            .print-container {
+              transform: scale(${scale});
+              transform-origin: top left;
+              width: ${100 / scale}%;
+            }
             table { border-collapse: collapse; width: 100%; }
             th, td { border: 1px solid #000; padding: 4px 6px; font-size: 10pt; }
             th { background: #d0d0d0; font-weight: bold; text-align: center; }
             .section-divider { background: #000 !important; color: white !important; font-weight: bold; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .subtotal { background: #b8b8b8 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .grand-total { background: #000 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            @media print { @page { size: A4; margin: 15mm; } }
+            @media print {
+              .print-container {
+                page-break-inside: avoid;
+              }
+            }
           </style>
         </head>
-        <body>${printContent}</body>
+        <body>
+          <div class="print-container">
+            ${printContent}
+          </div>
+        </body>
       </html>
     `);
     printWindow.document.close();
@@ -85,6 +168,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       <td style={{ textAlign: 'right' }}><strong>{sub.excess ? formatNumber(sub.excess) : ''}</strong></td>
     </tr>
   );
+
+  // Count total rows for info display
+  const totalRows = (data.pays?.length || 0) + (data.allowances?.length || 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -119,6 +205,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               ← Back
             </button>
           </div>
+        </div>
+
+        {/* Info banner about auto-fit */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
+          📄 <strong>Auto-Fit Active:</strong> {totalRows} heads ka content automatically ek A4 page pe fit hoga. PDF/Print mein scaling apply hogi agar zarurat ho.
         </div>
 
         {/* Summary cards */}
@@ -263,7 +354,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               <strong>Dated:</strong> _______________
             </div>
 
-            {/* Copy To section - with 4th item added */}
+            {/* Copy To section */}
             <div style={{ marginTop: '20px', fontSize: '10pt' }}>
               <em
                 style={{
