@@ -14,7 +14,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
-      // Dynamic import html2pdf (only on client)
       const html2pdf = (await import('html2pdf.js')).default;
       const element = document.getElementById('pdfContent');
       const filename = `Expenditure_${statement.month_name}_${statement.year}.pdf`;
@@ -259,58 +258,13 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </tbody>
             </table>
 
-            {/* Certification */}
-            <div style={{ marginTop: '18px', fontSize: '11pt' }}>
-              <strong>It is certified that:</strong>
-              <ol style={{ margin: '6px 0 0 0', paddingLeft: '25px' }}>
-                <li>
-                  The Department figures of final grant &amp; actuals are based on department's record.
-                </li>
-                <li>
-                  The Actual expenditure amounting to{' '}
-                  <strong>Rs. {formatNumber(data.grand_total.total)}/-</strong> has been accepted by the department.
-                </li>
-              </ol>
+            {/* Dated - left side */}
+            <div style={{ marginTop: '30px' }}>
+              <strong>Dated:</strong> _______________
             </div>
 
-            {/* Signatures */}
-            <div
-              style={{
-                marginTop: '30px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-end',
-              }}
-            >
-              <div><strong>Dated:</strong> _______________</div>
-              <div style={{ textAlign: 'center' }}>
-                <div
-                  style={{
-                    borderBottom: '1px solid #000',
-                    minWidth: '200px',
-                    padding: '0 5px',
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  Rs. {formatNumber(data.grand_total.this_month)}/-
-                </div>
-                <div>Verified for Rs.</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <div
-                  style={{
-                    borderBottom: '1px solid #000',
-                    width: '180px',
-                    height: '35px',
-                  }}
-                ></div>
-                <div><strong>{school.principal_designation}</strong></div>
-                <div>{school.name}</div>
-              </div>
-            </div>
-
-            {/* Copy To */}
-            <div style={{ marginTop: '25px', fontSize: '10pt' }}>
+            {/* Copy To section - with 4th item added */}
+            <div style={{ marginTop: '20px', fontSize: '10pt' }}>
               <em
                 style={{
                   fontStyle: 'italic',
@@ -324,7 +278,31 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 <li>District Comptroller of Accounts, {school.district}.</li>
                 <li>District Finance Office, {school.district}.</li>
                 <li>District Education Office ({school.gender}) {school.district}.</li>
+                <li>Office/School Record.</li>
               </ol>
+            </div>
+
+            {/* Principal Signature - bottom right */}
+            <div
+              style={{
+                marginTop: '40px',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <div style={{ textAlign: 'center' }}>
+                <div
+                  style={{
+                    borderBottom: '1px solid #000',
+                    width: '220px',
+                    height: '50px',
+                  }}
+                ></div>
+                <div style={{ marginTop: '5px' }}>
+                  <strong>{school.principal_designation}</strong>
+                </div>
+                <div>{school.name}</div>
+              </div>
             </div>
           </div>
         </div>
