@@ -11,6 +11,22 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
   const data = statement.data;
 
+  // ============================================================
+  // FILTER: Sirf wo heads dikhao jin mein koi value ho
+  // (budget, this_month, ya previous - kuch bhi non-zero)
+  // ============================================================
+  const hasData = (item) => {
+    const budget = parseFloat(item.budget) || 0;
+    const thisMonth = parseFloat(item.this_month) || 0;
+    const previous = parseFloat(item.previous) || 0;
+    return budget !== 0 || thisMonth !== 0 || previous !== 0;
+  };
+
+  // Filtered sections - sirf heads with data
+  const filteredPays = (data.pays || []).filter(hasData);
+  const filteredAllowances = (data.allowances || []).filter(hasData);
+  const filteredNonSalary = (data.non_salary || []).filter(hasData);
+
   // AUTO-FIT TO ONE A4 PAGE
   const calculateScaleFactor = (element) => {
     const A4_USABLE_HEIGHT_PX = 1010;
@@ -134,8 +150,8 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
     </tr>
   );
 
-  // Count total rows
-  const totalRows = (data.pays?.length || 0) + (data.allowances?.length || 0) + (data.non_salary?.length || 0);
+  // Total visible rows (after filter)
+  const totalRows = filteredPays.length + filteredAllowances.length + filteredNonSalary.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -173,7 +189,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
-          📄 <strong>Auto-Fit Active:</strong> {totalRows} heads ka content automatically ek A4 page pe fit hoga.
+          📄 <strong>Smart Display:</strong> Sirf {totalRows} heads dikhaye ja rahe hain jin mein data hai. Khaali heads automatically hide ho gaye.
         </div>
 
         {/* Summary cards */}
@@ -271,31 +287,39 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 </tr>
               </thead>
               <tbody>
-                {/* PAYS section */}
-                <tr>
-                  <td colSpan="2" className="section-divider">PAYS</td>
-                  <td colSpan="5" style={{ background: 'transparent', border: 'none' }}></td>
-                </tr>
-                {data.pays && data.pays.map(renderTableRow)}
-                {data.pays_subtotal && renderSubtotalRow('Total Pays', data.pays_subtotal)}
+                {/* PAYS section - only if has filtered rows */}
+                {filteredPays.length > 0 && (
+                  <>
+                    <tr>
+                      <td colSpan="2" className="section-divider">PAYS</td>
+                      <td colSpan="5" style={{ background: 'transparent', border: 'none' }}></td>
+                    </tr>
+                    {filteredPays.map(renderTableRow)}
+                    {renderSubtotalRow('Total Pays', data.pays_subtotal)}
+                  </>
+                )}
 
-                {/* ALLOWANCES section */}
-                <tr>
-                  <td colSpan="2" className="section-divider">REGULAR ALLOWANCES</td>
-                  <td colSpan="5" style={{ background: 'transparent', border: 'none' }}></td>
-                </tr>
-                {data.allowances && data.allowances.map(renderTableRow)}
-                {data.allowances_subtotal && renderSubtotalRow('Total Regular Allowances', data.allowances_subtotal)}
+                {/* ALLOWANCES section - only if has filtered rows */}
+                {filteredAllowances.length > 0 && (
+                  <>
+                    <tr>
+                      <td colSpan="2" className="section-divider">REGULAR ALLOWANCES</td>
+                      <td colSpan="5" style={{ background: 'transparent', border: 'none' }}></td>
+                    </tr>
+                    {filteredAllowances.map(renderTableRow)}
+                    {renderSubtotalRow('Total Regular Allowances', data.allowances_subtotal)}
+                  </>
+                )}
 
-                {/* NON-SALARY section */}
-                {data.non_salary && data.non_salary.length > 0 && (
+                {/* NON-SALARY section - only if has filtered rows */}
+                {filteredNonSalary.length > 0 && (
                   <>
                     <tr>
                       <td colSpan="2" className="section-divider">NON-SALARY COMPONENTS</td>
                       <td colSpan="5" style={{ background: 'transparent', border: 'none' }}></td>
                     </tr>
-                    {data.non_salary.map(renderTableRow)}
-                    {data.non_salary_subtotal && renderSubtotalRow('Total Non-Salary Components', data.non_salary_subtotal)}
+                    {filteredNonSalary.map(renderTableRow)}
+                    {renderSubtotalRow('Total Non-Salary Components', data.non_salary_subtotal)}
                   </>
                 )}
 
