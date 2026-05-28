@@ -352,7 +352,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
             {/* Dated - left side */}
             <div style={{ marginTop: '30px' }}>
-              <strong>Dated:</strong> _______________
+              <strong>Endoresment No: _______________ Dated:_______________</strong> 
             </div>
 
             {/* Copy To section */}
