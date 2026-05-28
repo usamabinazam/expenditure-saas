@@ -13,7 +13,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
   // ============================================================
   // FILTER: Sirf wo heads dikhao jin mein koi value ho
-  // (budget, this_month, ya previous - kuch bhi non-zero)
   // ============================================================
   const hasData = (item) => {
     const budget = parseFloat(item.budget) || 0;
@@ -22,7 +21,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
     return budget !== 0 || thisMonth !== 0 || previous !== 0;
   };
 
-  // Filtered sections - sirf heads with data
   const filteredPays = (data.pays || []).filter(hasData);
   const filteredAllowances = (data.allowances || []).filter(hasData);
   const filteredNonSalary = (data.non_salary || []).filter(hasData);
@@ -150,7 +148,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
     </tr>
   );
 
-  // Total visible rows (after filter)
   const totalRows = filteredPays.length + filteredAllowances.length + filteredNonSalary.length;
 
   return (
@@ -232,8 +229,8 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                   textDecoration: 'underline',
                 }}
               >
-        OFFICE OF THE {school.principal_designation?.toUpperCase()} {school.name?.toUpperCase()}
-      </div>
+                OFFICE OF THE {school.principal_designation?.toUpperCase()} {school.name?.toUpperCase()}
+              </div>
               <div
                 style={{
                   fontSize: '14pt',
@@ -242,17 +239,17 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                   marginTop: '2px',
                 }}
               >
-                 {school.district?.toUpperCase()}
+                {school.district?.toUpperCase()}
               </div>
             </div>
 
             <div style={{ textAlign: 'center', fontSize: '11pt', margin: '10px 0 6px 0' }}>
-  RECONCILIATION STATEMENT OF PAY & ALLOWANCES FOR THE MONTH OF
-  <br />
-  <em>
-    <strong>{data.month_year}</strong>
-  </em>
-</div>
+              RECONCILIATION STATEMENT OF PAY & ALLOWANCES FOR THE MONTH OF
+              <br />
+              <em>
+                <strong>{data.month_year}</strong>
+              </em>
+            </div>
 
             <div
               style={{
@@ -288,7 +285,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 </tr>
               </thead>
               <tbody>
-                {/* PAYS section - only if has filtered rows */}
+                {/* PAYS section */}
                 {filteredPays.length > 0 && (
                   <>
                     <tr>
@@ -300,7 +297,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                   </>
                 )}
 
-                {/* ALLOWANCES section - only if has filtered rows */}
+                {/* ALLOWANCES section */}
                 {filteredAllowances.length > 0 && (
                   <>
                     <tr>
@@ -312,7 +309,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                   </>
                 )}
 
-                {/* NON-SALARY section - only if has filtered rows */}
+                {/* NON-SALARY section */}
                 {filteredNonSalary.length > 0 && (
                   <>
                     <tr>
@@ -351,9 +348,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </tbody>
             </table>
 
-            {/* Dated - left side */}
+            {/* Endorsement + Dated */}
             <div style={{ marginTop: '30px' }}>
-              <strong>Endoresment No: _______________ Dated:_______________</strong> 
+              <strong>Endorsement No: _______________ Dated: _______________</strong>
             </div>
 
             {/* Copy To section */}
@@ -368,9 +365,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 Copy for information to the:
               </em>
               <ol style={{ textTransform: 'capitalize', margin: '4px 0 0 0', paddingLeft: '25px' }}>
-                <li>District Comptroller of Accounts, {school.district.?toLowerCase()}.</li>
-                <li>District Finance Office, {school.district.?toLowerCase()}.</li>
-                <li>District Education Office ({school.gender.?toLowerCase()}) {school.district.?toLowerCase()}.</li>
+                <li>District Comptroller of Accounts, {school.district?.toLowerCase()}.</li>
+                <li>District Finance Office, {school.district?.toLowerCase()}.</li>
+                <li>District Education Office ({school.gender?.toLowerCase()}) {school.district?.toLowerCase()}.</li>
                 <li>Office/School Record.</li>
               </ol>
             </div>
