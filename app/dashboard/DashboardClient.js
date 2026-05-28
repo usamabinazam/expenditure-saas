@@ -4,24 +4,25 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
+import SubscriptionBanner from '@/components/SubscriptionBanner';
 import { createClient } from '@/lib/supabase/client';
 import { formatNumber } from '@/lib/utils';
 
-export default function DashboardClient({ userEmail, school, statements: initialStatements }) {
+export default function DashboardClient({ userEmail, school, statements: initialStatements, subscription }) {
   const router = useRouter();
   const [statements, setStatements] = useState(initialStatements);
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this statement?')) return;
-    
+
     const supabase = createClient();
     const { error } = await supabase.from('statements').delete().eq('id', id);
-    
+
     if (error) {
       alert('Error: ' + error.message);
       return;
     }
-    
+
     setStatements(statements.filter(s => s.id !== id));
   };
 
@@ -30,6 +31,9 @@ export default function DashboardClient({ userEmail, school, statements: initial
       <Navigation userEmail={userEmail} />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        {/* Subscription banner - trial/expiry status */}
+        <SubscriptionBanner subscription={subscription} />
+
         {/* School info card */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex items-start justify-between">
