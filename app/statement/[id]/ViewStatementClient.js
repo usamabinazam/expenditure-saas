@@ -391,7 +391,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 <div style={{ marginTop: '5px' }}>
                   <strong>{school.principal_designation}</strong>
                 </div>
-                <div>{school.name}</div>
+                <div style={{textTransform: 'capitalize'}}>{school.name?.toLowerCase()}</div>
               </div>
             </div>
           </div>
