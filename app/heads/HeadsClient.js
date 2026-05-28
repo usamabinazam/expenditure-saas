@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import { createClient } from '@/lib/supabase/client';
+import { SECTIONS } from '@/lib/utils';
 
 export default function HeadsClient({ userEmail, school, heads: initialHeads }) {
   const router = useRouter();
@@ -26,8 +27,8 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
 
   const supabase = createClient();
 
-  const pays = heads.filter((h) => h.section === 'pays');
-  const allowances = heads.filter((h) => h.section === 'allowances');
+  // Helper function to get heads for any section
+  const getHeadsBySection = (sectionId) => heads.filter((h) => h.section === sectionId);
 
   // ADD NEW HEAD
   const handleAdd = async (e) => {
@@ -76,7 +77,6 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
     setHasUnsavedChanges(false);
   };
 
-  // BUDGET CHANGE
   const handleBudgetChange = (headId, value) => {
     setEditedBudgets({
       ...editedBudgets,
@@ -85,7 +85,6 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
     setHasUnsavedChanges(true);
   };
 
-  // SAVE ALL
   const handleSaveAll = async () => {
     setIsSaving(true);
 
@@ -138,7 +137,6 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
     alert(`✅ ${changes.length} budget(s) successfully save ho gaye!`);
   };
 
-  // CANCEL
   const handleCancelEditMode = () => {
     if (hasUnsavedChanges) {
       if (!confirm('⚠️ Tumne kuch changes kiye hain. Cancel karne se woh khoi jaayenge. Continue?')) {
@@ -150,7 +148,6 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
     setHasUnsavedChanges(false);
   };
 
-  // DELETE HEAD
   const handleDelete = async (id) => {
     if (!confirm('Yeh head delete karein?')) return;
 
@@ -400,8 +397,9 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
                 onChange={(e) => setNewHead({ ...newHead, section: e.target.value })}
                 className="px-3 py-2 border border-gray-300 rounded"
               >
-                <option value="pays">PAYS</option>
-                <option value="allowances">ALLOWANCES</option>
+                {SECTIONS.map((s) => (
+                  <option key={s.id} value={s.id}>{s.label}</option>
+                ))}
               </select>
               <input
                 type="text"
@@ -429,8 +427,10 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
           </div>
         )}
 
-        {renderTable(pays, 'PAYS')}
-        {renderTable(allowances, 'REGULAR ALLOWANCES')}
+        {/* Render all 3 sections dynamically */}
+        {SECTIONS.map((section) => 
+          renderTable(getHeadsBySection(section.id), section.label)
+        )}
 
         {isEditMode && (
           <div className="fixed bottom-6 right-6 z-50">
