@@ -11,29 +11,12 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
   const data = statement.data;
 
-  // ============================================================
   // AUTO-FIT TO ONE A4 PAGE
-  // Yeh function content ki height check karta hai aur scale calculate karta hai
-  // ============================================================
   const calculateScaleFactor = (element) => {
-    // A4 page dimensions in pixels (at 96 DPI)
-    // A4 = 210mm x 297mm
-    // Usable height with 15mm margins = 297 - 30 = 267mm = ~1010 pixels
     const A4_USABLE_HEIGHT_PX = 1010;
-
-    // Get actual content height
     const contentHeight = element.scrollHeight;
-
-    // If content fits, no scaling needed
-    if (contentHeight <= A4_USABLE_HEIGHT_PX) {
-      return 1.0;
-    }
-
-    // Calculate scale to fit
-    // Subtract small buffer (20px) to ensure proper fit
+    if (contentHeight <= A4_USABLE_HEIGHT_PX) return 1.0;
     const scale = (A4_USABLE_HEIGHT_PX - 20) / contentHeight;
-
-    // Don't go below 50% (would be unreadable)
     return Math.max(0.5, scale);
   };
 
@@ -44,10 +27,8 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       const element = document.getElementById('pdfContent');
       const filename = `Expenditure_${statement.month_name}_${statement.year}.pdf`;
 
-      // Calculate dynamic scale to fit one page
       const scale = calculateScaleFactor(element);
 
-      // Apply scaling temporarily
       const originalTransform = element.style.transform;
       const originalTransformOrigin = element.style.transformOrigin;
       const originalWidth = element.style.width;
@@ -65,7 +46,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         html2canvas: {
           scale: 2,
           useCORS: true,
-          // Ensure full content captured even after scaling
           windowHeight: element.scrollHeight,
         },
         jsPDF: {
@@ -73,13 +53,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           format: 'a4',
           orientation: 'portrait',
         },
-        // CRITICAL: prevent splitting onto multiple pages
         pagebreak: { mode: 'avoid-all' },
       };
 
       await html2pdf().set(opt).from(element).save();
 
-      // Restore original styles
       element.style.transform = originalTransform;
       element.style.transformOrigin = originalTransformOrigin;
       element.style.width = originalWidth;
@@ -102,18 +80,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         <head>
           <title>Print Statement</title>
           <style>
-            @page { 
-              size: A4; 
-              margin: 15mm; 
-            }
-            html, body { 
-              margin: 0; 
-              padding: 0;
-            }
-            body { 
-              font-family: 'Times New Roman', serif; 
-              color: #000;
-            }
+            @page { size: A4; margin: 15mm; }
+            html, body { margin: 0; padding: 0; }
+            body { font-family: 'Times New Roman', serif; color: #000; }
             .print-container {
               transform: scale(${scale});
               transform-origin: top left;
@@ -126,16 +95,12 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             .subtotal { background: #b8b8b8 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .grand-total { background: #000 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             @media print {
-              .print-container {
-                page-break-inside: avoid;
-              }
+              .print-container { page-break-inside: avoid; }
             }
           </style>
         </head>
         <body>
-          <div class="print-container">
-            ${printContent}
-          </div>
+          <div class="print-container">${printContent}</div>
         </body>
       </html>
     `);
@@ -169,8 +134,8 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
     </tr>
   );
 
-  // Count total rows for info display
-  const totalRows = (data.pays?.length || 0) + (data.allowances?.length || 0);
+  // Count total rows
+  const totalRows = (data.pays?.length || 0) + (data.allowances?.length || 0) + (data.non_salary?.length || 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -207,9 +172,8 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           </div>
         </div>
 
-        {/* Info banner about auto-fit */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
-          📄 <strong>Auto-Fit Active:</strong> {totalRows} heads ka content automatically ek A4 page pe fit hoga. PDF/Print mein scaling apply hogi agar zarurat ho.
+          📄 <strong>Auto-Fit Active:</strong> {totalRows} heads ka content automatically ek A4 page pe fit hoga.
         </div>
 
         {/* Summary cards */}
@@ -307,22 +271,35 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 </tr>
               </thead>
               <tbody>
+                {/* PAYS section */}
                 <tr>
                   <td colSpan="2" className="section-divider">PAYS</td>
                   <td colSpan="5" style={{ background: 'transparent', border: 'none' }}></td>
                 </tr>
-                {data.pays.map(renderTableRow)}
-                {renderSubtotalRow('Total Pays', data.pays_subtotal)}
+                {data.pays && data.pays.map(renderTableRow)}
+                {data.pays_subtotal && renderSubtotalRow('Total Pays', data.pays_subtotal)}
 
+                {/* ALLOWANCES section */}
                 <tr>
-                  <td colSpan="2" className="section-divider">REGULAR ALLOWENCES</td>
+                  <td colSpan="2" className="section-divider">REGULAR ALLOWANCES</td>
                   <td colSpan="5" style={{ background: 'transparent', border: 'none' }}></td>
                 </tr>
-                {data.allowances.map(renderTableRow)}
-                {renderSubtotalRow('Total Regular Allowances', data.allowances_subtotal)}
+                {data.allowances && data.allowances.map(renderTableRow)}
+                {data.allowances_subtotal && renderSubtotalRow('Total Regular Allowances', data.allowances_subtotal)}
 
-                {renderSubtotalRow('Total Pays + Regular Allowances', data.grand_total)}
+                {/* NON-SALARY section */}
+                {data.non_salary && data.non_salary.length > 0 && (
+                  <>
+                    <tr>
+                      <td colSpan="2" className="section-divider">NON-SALARY COMPONENTS</td>
+                      <td colSpan="5" style={{ background: 'transparent', border: 'none' }}></td>
+                    </tr>
+                    {data.non_salary.map(renderTableRow)}
+                    {data.non_salary_subtotal && renderSubtotalRow('Total Non-Salary Components', data.non_salary_subtotal)}
+                  </>
+                )}
 
+                {/* Grand Total */}
                 <tr className="grand-total">
                   <td><strong>GRAND TOTAL</strong></td>
                   <td style={{ textAlign: 'right' }}>
@@ -351,7 +328,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
             {/* Dated - left side */}
             <div style={{ marginTop: '30px' }}>
-              <p>Endorsement No: _______________ Dated: _______________</p> 
+              <strong>Dated:</strong> _______________
             </div>
 
             {/* Copy To section */}
