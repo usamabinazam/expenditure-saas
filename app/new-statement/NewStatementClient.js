@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import { createClient } from '@/lib/supabase/client';
-import { calculateStatement, getPreviousStatement, MONTH_NAMES } from '@/lib/utils';
+import { calculateStatement, getPreviousStatement, MONTH_NAMES, SECTIONS } from '@/lib/utils';
 
 export default function NewStatementClient({ userEmail, school, heads, statements }) {
   const router = useRouter();
@@ -31,8 +31,8 @@ export default function NewStatementClient({ userEmail, school, heads, statement
   const [year, setYear] = useState(defaultYear);
   const [amounts, setAmounts] = useState({});
 
-  const pays = heads.filter((h) => h.section === 'pays');
-  const allowances = heads.filter((h) => h.section === 'allowances');
+  // Get heads by section helper
+  const getHeadsBySection = (sectionId) => heads.filter((h) => h.section === sectionId);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,10 +53,9 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     };
 
     const supabase = createClient();
-    
-    // Upsert (insert or update if exists)
-    const existing = statements.find(s => s.year === year && s.month_num === month);
-    
+
+    const existing = statements.find((s) => s.year === year && s.month_num === month);
+
     let result;
     if (existing) {
       result = await supabase
@@ -98,6 +97,13 @@ export default function NewStatementClient({ userEmail, school, heads, statement
       </div>
     </div>
   );
+
+  // Section icons + colors
+  const sectionStyles = {
+    pays: { icon: '💰', bg: 'bg-white' },
+    allowances: { icon: '🎁', bg: 'bg-gray-50' },
+    non_salary: { icon: '🛠️', bg: 'bg-white' },
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -141,19 +147,28 @@ export default function NewStatementClient({ userEmail, school, heads, statement
             </div>
           </div>
 
-          {/* PAYS */}
-          <div className="p-6">
-            <h2 className="font-bold text-lg text-gray-800 mb-3 pb-2 border-b">💰 PAYS</h2>
-            <div className="space-y-2">{pays.map(renderInputRow)}</div>
-          </div>
-
-          {/* ALLOWANCES */}
-          <div className="p-6 border-t bg-gray-50">
-            <h2 className="font-bold text-lg text-gray-800 mb-3 pb-2 border-b">
-              🎁 REGULAR ALLOWANCES
-            </h2>
-            <div className="space-y-2">{allowances.map(renderInputRow)}</div>
-          </div>
+          {/* Render all 3 sections dynamically */}
+          {SECTIONS.map((section, index) => {
+            const sectionHeads = getHeadsBySection(section.id);
+            if (sectionHeads.length === 0) return null;
+            
+            const style = sectionStyles[section.id];
+            const isAlternate = index % 2 === 1;
+            
+            return (
+              <div 
+                key={section.id} 
+                className={`p-6 ${isAlternate ? 'bg-gray-50' : 'bg-white'} ${index > 0 ? 'border-t' : ''}`}
+              >
+                <h2 className="font-bold text-lg text-gray-800 mb-3 pb-2 border-b">
+                  {style.icon} {section.label}
+                </h2>
+                <div className="space-y-2">
+                  {sectionHeads.map(renderInputRow)}
+                </div>
+              </div>
+            );
+          })}
 
           {/* Submit */}
           <div className="p-6 border-t bg-white rounded-b-lg">
