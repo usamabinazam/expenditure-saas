@@ -5,7 +5,6 @@ import DashboardClient from './DashboardClient';
 export default async function DashboardPage() {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-
   if (!user) redirect('/login');
 
   // Check if school is set up
@@ -14,7 +13,6 @@ export default async function DashboardPage() {
     .select('*')
     .eq('user_id', user.id)
     .single();
-
   if (!school) redirect('/setup');
 
   // Get statements
@@ -25,11 +23,19 @@ export default async function DashboardPage() {
     .order('year', { ascending: false })
     .order('month_num', { ascending: false });
 
+  // Get subscription
+  const { data: subscription } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('user_id', user.id)
+    .single();
+
   return (
-    <DashboardClient 
-      userEmail={user.email} 
-      school={school} 
-      statements={statements || []} 
+    <DashboardClient
+      userEmail={user.email}
+      school={school}
+      statements={statements || []}
+      subscription={subscription}
     />
   );
 }
