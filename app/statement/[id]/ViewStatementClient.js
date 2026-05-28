@@ -232,8 +232,8 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                   textDecoration: 'underline',
                 }}
               >
-                OFFICE OF THE {school.principal_designation} {school.name}
-              </div>
+        OFFICE OF THE {school.principal_designation?.toUpperCase()} {school.name?.toUpperCase()}
+      </div>
               <div
                 style={{
                   fontSize: '14pt',
@@ -242,16 +242,17 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                   marginTop: '2px',
                 }}
               >
-                {school.district}
+                 {school.district?.toUpperCase()}
               </div>
             </div>
 
             <div style={{ textAlign: 'center', fontSize: '11pt', margin: '10px 0 6px 0' }}>
-              RECONCILIATION STATEMENT OF PAY AND ALLOWANCES FOR THE MONTH OF{' '}
-              <em>
-                <strong>{data.month_year}</strong>
-              </em>
-            </div>
+  RECONCILIATION STATEMENT OF PAY & ALLOWANCES FOR THE MONTH OF
+  <br />
+  <em>
+    <strong>{data.month_year}</strong>
+  </em>
+</div>
 
             <div
               style={{
@@ -263,10 +264,10 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             >
               <div>
                 <strong>NAME OF DEPARTMENT</strong> &nbsp;&nbsp;&nbsp;{' '}
-                <u>{school.department}</u>
+                <u>{school.department?.toUpperCase()}</u>
               </div>
               <div>
-                <strong>DDO CODE</strong> &nbsp;&nbsp;&nbsp; <u>{school.ddo_code}</u>
+                <strong>DDO CODE</strong> &nbsp;&nbsp;&nbsp; <u>{school.ddo_code?.toUpperCase()}</u>
               </div>
             </div>
 
@@ -366,10 +367,10 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               >
                 Copy for information to the:
               </em>
-              <ol style={{ margin: '4px 0 0 0', paddingLeft: '25px' }}>
-                <li>District Comptroller of Accounts, {school.district}.</li>
-                <li>District Finance Office, {school.district}.</li>
-                <li>District Education Office ({school.gender}) {school.district}.</li>
+              <ol style={{ textTransform: 'capitalize', margin: '4px 0 0 0', paddingLeft: '25px' }}>
+                <li>District Comptroller of Accounts, {school.district.?toLowerCase()}.</li>
+                <li>District Finance Office, {school.district.?toLowerCase()}.</li>
+                <li>District Education Office ({school.gender.?toLowerCase()}) {school.district.?toLowerCase()}.</li>
                 <li>Office/School Record.</li>
               </ol>
             </div>
