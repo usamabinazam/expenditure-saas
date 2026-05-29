@@ -28,7 +28,6 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       return;
     }
 
-    // Get current subscription to extend if needed
     const { data: currentSub } = await supabase
       .from('subscriptions')
       .select('expires_at')
@@ -37,7 +36,6 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
 
     const newExpiry = calculateNewExpiry(currentSub?.expires_at, plan.duration_days);
 
-    // Update subscription to active
     const { error: subError } = await supabase
       .from('subscriptions')
       .update({
@@ -58,7 +56,6 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       return;
     }
 
-    // Mark request as approved
     await supabase
       .from('payment_requests')
       .update({
@@ -67,16 +64,18 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       })
       .eq('id', request.id);
 
-    // Update local state
     setRequests(requests.filter((r) => r.id !== request.id));
     setProcessing(null);
     alert(`✅ ${request.profiles?.email} activated! Expires: ${formatDate(newExpiry)}`);
+
+    // FORCE FRESH DATA - revalidate aur full refresh
+    router.refresh();
   };
 
   // REJECT PAYMENT
   const handleReject = async (request) => {
     const reason = prompt('Reject karne ki wajah? (optional)');
-    if (reason === null) return; // cancelled
+    if (reason === null) return;
 
     setProcessing(request.id);
 
@@ -89,7 +88,6 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       })
       .eq('id', request.id);
 
-    // Reset subscription back to expired
     await supabase
       .from('subscriptions')
       .update({ status: 'expired', updated_at: new Date().toISOString() })
@@ -98,9 +96,11 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
     setRequests(requests.filter((r) => r.id !== request.id));
     setProcessing(null);
     alert('Payment rejected');
+
+    router.refresh();
   };
 
-  // MANUAL EXTEND (give free days)
+  // MANUAL EXTEND
   const handleManualExtend = async (sub) => {
     const days = prompt('Kitne din add karne hain?', '60');
     if (!days || isNaN(days)) return;
@@ -127,6 +127,13 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
     );
     setProcessing(null);
     alert(`✅ ${days} din add ho gaye! New expiry: ${formatDate(newExpiry)}`);
+
+    router.refresh();
+  };
+
+  // MANUAL REFRESH BUTTON
+  const handleRefresh = () => {
+    router.refresh();
   };
 
   return (
@@ -134,7 +141,15 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       <Navigation userEmail={userEmail} />
 
       <main className="max-w-5xl mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">🎯 Admin Panel</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">🎯 Admin Panel</h1>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-medium"
+          >
+            🔄 Refresh
+          </button>
+        </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
