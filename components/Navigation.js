@@ -16,14 +16,21 @@ export default function Navigation({ userEmail }) {
 
   return (
     <nav className="bg-emerald-700 text-white shadow-md">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
         <Link href="/dashboard" className="text-xl font-bold">
           📊 Expenditure Generator
         </Link>
-        <div className="flex gap-4 text-sm items-center">
+        <div className="flex gap-3 text-sm items-center flex-wrap">
           <Link href="/dashboard" className="hover:underline">Dashboard</Link>
           <Link href="/new-statement" className="hover:underline">New Statement</Link>
           <Link href="/heads" className="hover:underline">Manage Heads</Link>
+          {/* NEW: Referrals link - highlighted to attract attention */}
+          <Link 
+            href="/referrals" 
+            className="bg-yellow-400 hover:bg-yellow-300 text-emerald-900 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap"
+          >
+            🎁 Earn 2 Months Free
+          </Link>
           <Link href="/setup" className="hover:underline">Profile</Link>
           <span className="text-emerald-200 text-xs">{userEmail}</span>
           <button
