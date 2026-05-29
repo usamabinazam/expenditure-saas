@@ -11,8 +11,9 @@ function SignupForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [referralValid, setReferralValid] = useState(null); // null, true, false
+  const [referralValid, setReferralValid] = useState(null);
   const [referrerEmail, setReferrerEmail] = useState('');
+  const [referrerId, setReferrerId] = useState(null);
   const [validatingCode, setValidatingCode] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -32,33 +33,42 @@ function SignupForm() {
     }
   }, [searchParams]);
 
-  // Validate referral code (check if it exists in profiles)
+  // Validate referral code using PUBLIC FUNCTION (bypasses RLS)
   const validateReferralCode = async (code) => {
     if (!code || code.length < 4) {
       setReferralValid(null);
       setReferrerEmail('');
+      setReferrerId(null);
       return;
     }
 
     setValidatingCode(true);
     const supabase = createClient();
 
+    // Use the SECURITY DEFINER function - works for anonymous users
     const { data, error: lookupError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('referral_code', code.toUpperCase().trim())
-      .maybeSingle();
+      .rpc('lookup_referral_code', { check_code: code.toUpperCase().trim() });
 
     setValidatingCode(false);
 
-    if (lookupError || !data) {
+    if (lookupError) {
+      console.error('Lookup error:', lookupError);
       setReferralValid(false);
       setReferrerEmail('');
+      setReferrerId(null);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      setReferralValid(false);
+      setReferrerEmail('');
+      setReferrerId(null);
     } else {
       setReferralValid(true);
       // Mask email for privacy: u****@gmail.com
-      const masked = data.email.replace(/^(.).*(@.*)$/, '$1***$2');
+      const masked = data[0].referrer_email.replace(/^(.).*(@.*)$/, '$1***$2');
       setReferrerEmail(masked);
+      setReferrerId(data[0].referrer_id);
     }
   };
 
@@ -66,12 +76,12 @@ function SignupForm() {
     const code = e.target.value.toUpperCase().trim();
     setFormData({ ...formData, referralCode: code });
     
-    // Validate after user stops typing (debounce-ish)
     if (code.length >= 4) {
       validateReferralCode(code);
     } else {
       setReferralValid(null);
       setReferrerEmail('');
+      setReferrerId(null);
     }
   };
 
@@ -115,32 +125,22 @@ function SignupForm() {
     }
 
     // 2. If referral code was valid, create referral record
-    if (signUpData.user && formData.referralCode && referralValid === true) {
+    if (signUpData.user && referralValid === true && referrerId) {
       try {
-        // Get referrer's user ID
-        const { data: referrer } = await supabase
+        // Update new user's profile with referred_by
+        await supabase
           .from('profiles')
-          .select('id')
-          .eq('referral_code', formData.referralCode)
-          .single();
+          .update({ referred_by: referrerId })
+          .eq('id', signUpData.user.id);
 
-        if (referrer) {
-          // Update new user's profile with referred_by
-          await supabase
-            .from('profiles')
-            .update({ referred_by: referrer.id })
-            .eq('id', signUpData.user.id);
-
-          // Create referral record
-          await supabase.from('referrals').insert({
-            referrer_id: referrer.id,
-            referee_id: signUpData.user.id,
-            referral_code: formData.referralCode,
-            status: 'pending',
-          });
-        }
+        // Create referral record
+        await supabase.from('referrals').insert({
+          referrer_id: referrerId,
+          referee_id: signUpData.user.id,
+          referral_code: formData.referralCode,
+          status: 'pending',
+        });
       } catch (err) {
-        // Referral linking failed but signup succeeded - don't block user
         console.error('Referral linking failed:', err);
       }
     }
@@ -307,7 +307,6 @@ function SignupForm() {
   );
 }
 
-// Wrap in Suspense for useSearchParams
 export default function SignupPage() {
   return (
     <Suspense fallback={
