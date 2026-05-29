@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import ReferralsClient from './ReferralsClient';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'; 
 
 export default async function ReferralsPage() {
   const supabase = await createClient();
