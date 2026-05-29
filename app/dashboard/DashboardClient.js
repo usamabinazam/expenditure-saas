@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
@@ -11,6 +11,25 @@ import { formatNumber } from '@/lib/utils';
 export default function DashboardClient({ userEmail, school, statements: initialStatements, subscription }) {
   const router = useRouter();
   const [statements, setStatements] = useState(initialStatements);
+  const [showReferralPromo, setShowReferralPromo] = useState(true);
+
+  // Check if user dismissed the promo (localStorage)
+  useEffect(() => {
+    const dismissed = localStorage.getItem('referral_promo_dismissed');
+    if (dismissed) {
+      // Show again after 7 days
+      const dismissedDate = new Date(dismissed);
+      const daysSince = (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince < 7) {
+        setShowReferralPromo(false);
+      }
+    }
+  }, []);
+
+  const handleDismissPromo = () => {
+    localStorage.setItem('referral_promo_dismissed', new Date().toISOString());
+    setShowReferralPromo(false);
+  };
 
   const handleDelete = async (id) => {
     if (!confirm('Delete this statement?')) return;
@@ -33,6 +52,42 @@ export default function DashboardClient({ userEmail, school, statements: initial
       <main className="max-w-6xl mx-auto px-4 py-6">
         {/* Subscription banner - trial/expiry status */}
         <SubscriptionBanner subscription={subscription} />
+
+        {/* REFERRAL PROMO BANNER (dismissible) */}
+        {showReferralPromo && (
+          <div className="relative bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-600 rounded-lg p-5 mb-6 shadow-lg overflow-hidden">
+            {/* Dismiss button */}
+            <button
+              onClick={handleDismissPromo}
+              className="absolute top-2 right-2 text-white/70 hover:text-white text-xl leading-none w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10"
+              title="Dismiss (7 din ke liye)"
+            >
+              ×
+            </button>
+
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="text-4xl">🎁</div>
+                <div className="flex-1">
+                  <div className="font-bold text-white text-lg">
+                    Earn 2 Months Free!
+                  </div>
+                  <div className="text-emerald-50 text-sm mt-1">
+                    Apne dosto/colleagues ko refer karein. Har paid signup pe aapko <strong>60 din free</strong> subscription milegi. Unhe bhi discount milega!
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Link
+                  href="/referrals"
+                  className="bg-white text-emerald-700 hover:bg-emerald-50 font-bold px-5 py-2 rounded-lg text-sm shadow-md whitespace-nowrap"
+                >
+                  📤 Share & Earn
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* School info card */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
