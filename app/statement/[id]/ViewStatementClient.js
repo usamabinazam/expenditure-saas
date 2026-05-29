@@ -25,12 +25,13 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   const totalRows = filteredPays.length + filteredAllowances.length + filteredNonSalary.length;
 
   const getCompactStyles = (rows) => {
-    if (rows <= 10) return { fontSize: 9, rowPadding: '3px 5px', headerSize: 14, titleSize: 10 };
-    if (rows <= 15) return { fontSize: 8, rowPadding: '2.5px 4px', headerSize: 13, titleSize: 9 };
-    if (rows <= 20) return { fontSize: 7, rowPadding: '2px 4px', headerSize: 12, titleSize: 8 };
-    if (rows <= 30) return { fontSize: 6.5, rowPadding: '1.5px 3px', headerSize: 11, titleSize: 7 };
-    if (rows <= 40) return { fontSize: 6, rowPadding: '1px 3px', headerSize: 10, titleSize: 6 };
-    return { fontSize: 5.5, rowPadding: '0.5px 2px', headerSize: 9, titleSize: 6 };
+    // Minimum 7pt - chote pe strikethrough glitch aata hai PDF mein
+    if (rows <= 10) return { fontSize: 10, rowPadding: '3px 5px', headerSize: 14, titleSize: 10 };
+    if (rows <= 15) return { fontSize: 9, rowPadding: '2.5px 4px', headerSize: 13, titleSize: 9 };
+    if (rows <= 20) return { fontSize: 8.5, rowPadding: '2px 4px', headerSize: 12, titleSize: 8 };
+    if (rows <= 30) return { fontSize: 8, rowPadding: '1.5px 3px', headerSize: 11, titleSize: 7 };
+    if (rows <= 40) return { fontSize: 7.5, rowPadding: '1px 3px', headerSize: 10, titleSize: 7 };
+    return { fontSize: 7, rowPadding: '0.5px 2px', headerSize: 9, titleSize: 6 };
   };
 
   const handleDownloadPDF = async () => {
@@ -49,6 +50,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         styleEl.textContent = `
           .pdf-content {
             font-size: ${styles.fontSize}pt !important;
+            -webkit-font-smoothing: antialiased !important;
+            -moz-osx-font-smoothing: grayscale !important;
+            text-rendering: geometricPrecision !important;
           }
           .pdf-content table {
             border-collapse: collapse !important;
@@ -60,7 +64,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             font-size: ${styles.fontSize}pt !important;
             padding: ${styles.rowPadding} !important;
             vertical-align: middle !important;
-            line-height: 1.3 !important;
+            line-height: 1.4 !important;
+            text-decoration: none !important;
+            -webkit-text-stroke: 0 !important;
           }
           .pdf-content table th {
             font-weight: bold !important;
@@ -108,15 +114,19 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       const opt = {
         margin: 5,
         filename,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg', quality: 1.0 },
         html2canvas: {
-          scale: 2,
+          scale: 4,           // Pehle 2 tha - ab 4 (sharper text, no strikethrough)
           useCORS: true,
+          letterRendering: true,
+          allowTaint: true,
+          dpi: 300,
         },
         jsPDF: {
           unit: 'mm',
           format: 'a4',
           orientation: 'portrait',
+          compress: true,
         },
         pagebreak: printMode === 'fit'
           ? { mode: 'avoid-all' }
@@ -472,7 +482,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
             <div
               style={{
-                marginTop: '5px',
+                marginTop: '10px',
                 display: 'flex',
                 justifyContent: 'flex-end',
               }}
@@ -480,12 +490,12 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               <div style={{ textAlign: 'center' }}>
                 <div
                   style={{
-                    borderBottom: '0.8px solid #000',
+                    borderBottom: '1px solid #000',
                     width: '220px',
                     height: '50px',
                   }}
                 ></div>
-                <div style={{ marginTop: '2px' }}>
+                <div style={{ marginTop: '5px' }}>
                   <strong>{school.principal_designation}</strong>
                 </div>
                 <div>{school.name}</div>
