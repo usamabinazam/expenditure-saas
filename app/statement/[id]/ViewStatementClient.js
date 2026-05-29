@@ -8,11 +8,10 @@ import { formatNumber } from '@/lib/utils';
 export default function ViewStatementClient({ userEmail, school, statement }) {
   const router = useRouter();
   const [downloading, setDownloading] = useState(false);
-  const [printMode, setPrintMode] = useState('fit'); // 'fit' or 'normal'
+  const [printMode, setPrintMode] = useState('fit');
 
   const data = statement.data;
 
-  // FILTER: Sirf wo heads dikhao jin mein koi value ho
   const hasData = (item) => {
     const budget = parseFloat(item.budget) || 0;
     const thisMonth = parseFloat(item.this_month) || 0;
@@ -25,14 +24,14 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   const filteredNonSalary = (data.non_salary || []).filter(hasData);
   const totalRows = filteredPays.length + filteredAllowances.length + filteredNonSalary.length;
 
-  // Calculate font sizes based on total rows (for fit mode)
+  // More aggressive font sizing for fit mode
   const getCompactStyles = (rows) => {
-    // More rows = smaller fonts
-    if (rows <= 15) return { fontSize: 10, rowPadding: '4px 6px', headerSize: 16, titleSize: 12 };
-    if (rows <= 20) return { fontSize: 9, rowPadding: '3px 5px', headerSize: 15, titleSize: 11 };
-    if (rows <= 30) return { fontSize: 8, rowPadding: '2px 4px', headerSize: 14, titleSize: 10 };
-    if (rows <= 40) return { fontSize: 7, rowPadding: '2px 3px', headerSize: 13, titleSize: 9 };
-    return { fontSize: 6, rowPadding: '1px 3px', headerSize: 12, titleSize: 8 };
+    if (rows <= 10) return { fontSize: 9, rowPadding: '2px 4px', headerSize: 14, titleSize: 10 };
+    if (rows <= 15) return { fontSize: 8, rowPadding: '1.5px 4px', headerSize: 13, titleSize: 9 };
+    if (rows <= 20) return { fontSize: 7, rowPadding: '1px 3px', headerSize: 12, titleSize: 8 };
+    if (rows <= 30) return { fontSize: 6, rowPadding: '0.5px 3px', headerSize: 11, titleSize: 7 };
+    if (rows <= 40) return { fontSize: 5.5, rowPadding: '0.5px 2px', headerSize: 10, titleSize: 6 };
+    return { fontSize: 5, rowPadding: '0px 2px', headerSize: 9, titleSize: 6 };
   };
 
   const handleDownloadPDF = async () => {
@@ -42,21 +41,22 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       const original = document.getElementById('pdfContent');
       const filename = `Expenditure_${statement.month_name}_${statement.year}.pdf`;
 
-      // Clone the content to manipulate without affecting display
       const clone = original.cloneNode(true);
 
       if (printMode === 'fit') {
-        // Apply compact styles to clone for fit mode
         const styles = getCompactStyles(totalRows);
 
-        // Inject compact styles into clone
         const styleEl = document.createElement('style');
         styleEl.textContent = `
+          .pdf-content {
+            font-size: ${styles.fontSize}pt !important;
+          }
           .pdf-content table, .pdf-content table td, .pdf-content table th {
             font-size: ${styles.fontSize}pt !important;
             padding: ${styles.rowPadding} !important;
+            vertical-align: middle !important;
           }
-          .pdf-content h1, .pdf-content [style*="18pt"] {
+          .pdf-content [style*="18pt"] {
             font-size: ${styles.headerSize}pt !important;
           }
           .pdf-content [style*="14pt"] {
@@ -68,26 +68,26 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           .pdf-content [style*="10pt"] {
             font-size: ${styles.titleSize - 1}pt !important;
           }
-          .pdf-content [style*="marginTop: '30px'"], 
-          .pdf-content [style*="marginTop: '40px'"],
-          .pdf-content [style*="marginTop: '20px'"] {
-            margin-top: 10px !important;
+          .pdf-content [style*="9pt"] {
+            font-size: ${styles.titleSize - 2}pt !important;
+          }
+          .pdf-content [style*="marginTop"] {
+            margin-top: 6px !important;
           }
         `;
         clone.insertBefore(styleEl, clone.firstChild);
       }
 
-      // Create temporary container
       const tempContainer = document.createElement('div');
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
-      tempContainer.style.width = '190mm'; // A4 width minus margins
+      tempContainer.style.width = '200mm'; // wider since margins reduced
       tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
       const opt = {
-        margin: 10, // 10mm on all sides
+        margin: 5, // 5mm = ~half inch ka half (Tight margins on all sides)
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
@@ -106,7 +106,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
       await html2pdf().set(opt).from(clone).save();
 
-      // Clean up
       document.body.removeChild(tempContainer);
     } catch (err) {
       alert('PDF generation failed: ' + err.message);
@@ -124,17 +123,17 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
     if (printMode === 'fit') {
       const styles = getCompactStyles(totalRows);
       compactStyles = `
+        body { font-size: ${styles.fontSize}pt !important; }
         table, table td, table th {
           font-size: ${styles.fontSize}pt !important;
           padding: ${styles.rowPadding} !important;
+          vertical-align: middle !important;
         }
         [style*="18pt"] { font-size: ${styles.headerSize}pt !important; }
         [style*="14pt"] { font-size: ${styles.titleSize + 1}pt !important; }
         [style*="11pt"] { font-size: ${styles.titleSize}pt !important; }
         [style*="10pt"] { font-size: ${styles.titleSize - 1}pt !important; }
-        [style*="marginTop: '30px'"],
-        [style*="marginTop: '40px'"],
-        [style*="marginTop: '20px'"] { margin-top: 10px !important; }
+        [style*="marginTop"] { margin-top: 6px !important; }
       `;
     }
 
@@ -144,11 +143,16 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         <head>
           <title>Print Statement</title>
           <style>
-            @page { size: A4; margin: 10mm; }
+            @page { size: A4; margin: 5mm; }
             html, body { margin: 0; padding: 0; }
             body { font-family: 'Times New Roman', serif; color: #000; }
             table { border-collapse: collapse; width: 100%; }
-            th, td { border: 1px solid #000; padding: 4px 6px; font-size: 10pt; }
+            th, td { 
+              border: 1px solid #000; 
+              padding: 4px 6px; 
+              font-size: 10pt;
+              vertical-align: middle;
+            }
             th { background: #d0d0d0; font-weight: bold; text-align: center; }
             .section-divider { background: #000 !important; color: white !important; font-weight: bold; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .subtotal { background: #b8b8b8 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -164,29 +168,30 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
     setTimeout(() => printWindow.print(), 500);
   };
 
+  // Row with proper vertical alignment
   const renderTableRow = (item) => (
     <tr key={item.code}>
-      <td>
+      <td style={{ verticalAlign: 'middle' }}>
         <span style={{ fontSize: '9pt' }}>{item.code}</span>&nbsp;&nbsp;{item.name}
       </td>
-      <td style={{ textAlign: 'right' }}>{item.budget ? formatNumber(item.budget) : ''}</td>
-      <td style={{ textAlign: 'right' }}>{item.this_month ? formatNumber(item.this_month) : ''}</td>
-      <td style={{ textAlign: 'right' }}>{item.previous ? formatNumber(item.previous) : ''}</td>
-      <td style={{ textAlign: 'right' }}>{item.total ? formatNumber(item.total) : ''}</td>
-      <td style={{ textAlign: 'right' }}>{item.saving ? formatNumber(item.saving) : ''}</td>
-      <td style={{ textAlign: 'right' }}>{item.excess ? formatNumber(item.excess) : ''}</td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{item.budget ? formatNumber(item.budget) : ''}</td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{item.this_month ? formatNumber(item.this_month) : ''}</td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{item.previous ? formatNumber(item.previous) : ''}</td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{item.total ? formatNumber(item.total) : ''}</td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{item.saving ? formatNumber(item.saving) : ''}</td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{item.excess ? formatNumber(item.excess) : ''}</td>
     </tr>
   );
 
   const renderSubtotalRow = (label, sub) => (
     <tr className="subtotal">
-      <td><strong>{label}</strong></td>
-      <td style={{ textAlign: 'right' }}>{sub.budget ? formatNumber(sub.budget) : ''}</td>
-      <td style={{ textAlign: 'right' }}><strong>{formatNumber(sub.this_month)}</strong></td>
-      <td style={{ textAlign: 'right' }}>{sub.previous ? formatNumber(sub.previous) : ''}</td>
-      <td style={{ textAlign: 'right' }}><strong>{formatNumber(sub.total)}</strong></td>
-      <td style={{ textAlign: 'right' }}>{sub.saving ? formatNumber(sub.saving) : ''}</td>
-      <td style={{ textAlign: 'right' }}><strong>{sub.excess ? formatNumber(sub.excess) : ''}</strong></td>
+      <td style={{ verticalAlign: 'middle' }}><strong>{label}</strong></td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{sub.budget ? formatNumber(sub.budget) : ''}</td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}><strong>{formatNumber(sub.this_month)}</strong></td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{sub.previous ? formatNumber(sub.previous) : ''}</td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}><strong>{formatNumber(sub.total)}</strong></td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{sub.saving ? formatNumber(sub.saving) : ''}</td>
+      <td style={{ textAlign: 'right', verticalAlign: 'middle' }}><strong>{sub.excess ? formatNumber(sub.excess) : ''}</strong></td>
     </tr>
   );
 
@@ -225,15 +230,14 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           </div>
         </div>
 
-        {/* PRINT MODE TOGGLE */}
         <div className="bg-white rounded-lg shadow p-4 mb-4 border border-gray-200">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <div className="font-semibold text-gray-800 mb-1">🖨️ Print Mode</div>
               <div className="text-xs text-gray-600">
                 {printMode === 'fit'
-                  ? `Sab content ek A4 page pe fit (${totalRows} heads - chote font)`
-                  : 'Normal size, multiple pages pe distribute hoga'}
+                  ? `Sab content ek A4 page pe fit (${totalRows} heads)`
+                  : 'Normal size, multiple pages pe distribute'}
               </div>
             </div>
             <div className="flex gap-2">
@@ -265,7 +269,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           📄 <strong>Smart Display:</strong> {totalRows} heads dikhaye ja rahe hain. Khaali heads auto-hide.
         </div>
 
-        {/* Summary cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-xs text-gray-500 uppercase">This Month</div>
@@ -293,7 +296,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           </div>
         </div>
 
-        {/* PDF Preview */}
+        {/* PDF Content */}
         <div className="bg-white rounded-lg shadow p-6 overflow-x-auto">
           <div id="pdfContent" className="pdf-content">
             <div style={{ textAlign: 'center', marginBottom: '12px' }}>
@@ -343,19 +346,19 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
             </div>
 
-            <table>
+            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
               <thead>
                 <tr>
-                  <th rowSpan="2" style={{ width: '28%' }}>Objects</th>
-                  <th rowSpan="2" style={{ width: '11%' }}>Sanctioned<br />Budget</th>
-                  <th colSpan="2">DEPARTMENTAL FIGURE</th>
-                  <th rowSpan="2" style={{ width: '11%' }}>TOTAL</th>
-                  <th rowSpan="2" style={{ width: '10%' }}>Saving</th>
-                  <th rowSpan="2" style={{ width: '10%' }}>Excess</th>
+                  <th rowSpan="2" style={{ width: '28%', verticalAlign: 'middle' }}>Objects</th>
+                  <th rowSpan="2" style={{ width: '11%', verticalAlign: 'middle' }}>Sanctioned<br />Budget</th>
+                  <th colSpan="2" style={{ verticalAlign: 'middle' }}>DEPARTMENTAL FIGURE</th>
+                  <th rowSpan="2" style={{ width: '11%', verticalAlign: 'middle' }}>TOTAL</th>
+                  <th rowSpan="2" style={{ width: '10%', verticalAlign: 'middle' }}>Saving</th>
+                  <th rowSpan="2" style={{ width: '10%', verticalAlign: 'middle' }}>Excess</th>
                 </tr>
                 <tr>
-                  <th style={{ width: '11%' }}>During this<br />Month</th>
-                  <th style={{ width: '10%' }}>Previous</th>
+                  <th style={{ width: '11%', verticalAlign: 'middle' }}>During this<br />Month</th>
+                  <th style={{ width: '10%', verticalAlign: 'middle' }}>Previous</th>
                 </tr>
               </thead>
               <tbody>
@@ -393,23 +396,23 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 )}
 
                 <tr className="grand-total">
-                  <td><strong>GRAND TOTAL</strong></td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ verticalAlign: 'middle' }}><strong>GRAND TOTAL</strong></td>
+                  <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
                     <strong>{data.grand_total.budget ? formatNumber(data.grand_total.budget) : ''}</strong>
                   </td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
                     <strong>{formatNumber(data.grand_total.this_month)}</strong>
                   </td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
                     {data.grand_total.previous ? formatNumber(data.grand_total.previous) : ''}
                   </td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
                     <strong>{formatNumber(data.grand_total.total)}</strong>
                   </td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
                     {data.grand_total.saving ? formatNumber(data.grand_total.saving) : ''}
                   </td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
                     <strong>
                       {data.grand_total.excess ? formatNumber(data.grand_total.excess) : ''}
                     </strong>
@@ -464,6 +467,41 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           </div>
         </div>
       </main>
+
+      {/* Global styles for table */}
+      <style jsx global>{`
+        .pdf-content table {
+          border-collapse: collapse;
+          width: 100%;
+        }
+        .pdf-content table th,
+        .pdf-content table td {
+          border: 1px solid #000;
+          padding: 4px 6px;
+          font-size: 10pt;
+          vertical-align: middle !important;
+        }
+        .pdf-content table th {
+          background: #d0d0d0;
+          font-weight: bold;
+          text-align: center;
+        }
+        .pdf-content .section-divider {
+          background: #000 !important;
+          color: white !important;
+          font-weight: bold;
+          text-align: center;
+        }
+        .pdf-content .subtotal {
+          background: #b8b8b8 !important;
+          font-weight: bold;
+        }
+        .pdf-content .grand-total {
+          background: #000 !important;
+          color: white !important;
+          font-weight: bold;
+        }
+      `}</style>
     </div>
   );
 }
