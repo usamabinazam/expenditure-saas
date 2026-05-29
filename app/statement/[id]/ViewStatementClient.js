@@ -421,11 +421,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </tbody>
             </table>
 
-            <div style={{ marginTop: '20px', fontSize: '12pt' }}>
+            <div style={{ marginTop: '10px', fontSize: '10pt' }}>
               <strong>Endorsement No: _______________ Dated: _______________</strong>
             </div>
 
-            <div style={{ marginTop: '20px', fontSize: '12pt' }}>
+            <div style={{ marginTop: '5px', fontSize: '10pt' }}>
               <em
                 style={{
                   fontStyle: 'italic',
@@ -445,7 +445,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
             <div
               style={{
-                marginTop: '10px',
+                marginTop: '5px',
                 display: 'flex',
                 justifyContent: 'flex-end',
               }}
