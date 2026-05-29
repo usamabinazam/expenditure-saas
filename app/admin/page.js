@@ -6,7 +6,6 @@ export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
   const supabase = await createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
@@ -24,9 +23,40 @@ export default async function AdminPage() {
   // Get pending payment requests with user emails
   const { data: pendingRequests } = await supabase
     .from('payment_requests')
-    .select('*, profiles(email)')
+    .select('*, profiles(email, referred_by)')
     .eq('status', 'pending')
     .order('created_at', { ascending: false });
+
+  // For each pending request, check if user is referred (for showing bonus info)
+  const enrichedRequests = await Promise.all(
+    (pendingRequests || []).map(async (req) => {
+      if (!req.profiles?.referred_by) {
+        return { ...req, referrer_email: null, will_give_bonus: false };
+      }
+
+      // Get referrer email
+      const { data: referrer } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', req.profiles.referred_by)
+        .single();
+
+      // Check if referral reward already given (status != 'rewarded')
+      const { data: referralRecord } = await supabase
+        .from('referrals')
+        .select('status')
+        .eq('referee_id', req.user_id)
+        .maybeSingle();
+
+      const willGiveBonus = referralRecord && referralRecord.status !== 'rewarded';
+
+      return {
+        ...req,
+        referrer_email: referrer?.email || null,
+        will_give_bonus: willGiveBonus,
+      };
+    })
+  );
 
   // Get all subscriptions with emails
   const { data: allSubscriptions } = await supabase
@@ -37,7 +67,7 @@ export default async function AdminPage() {
   return (
     <AdminClient
       userEmail={user.email}
-      pendingRequests={pendingRequests || []}
+      pendingRequests={enrichedRequests || []}
       allSubscriptions={allSubscriptions || []}
     />
   );
