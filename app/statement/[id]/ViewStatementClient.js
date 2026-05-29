@@ -148,7 +148,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             body { font-family: 'Times New Roman', serif; color: #000; }
             table { border-collapse: collapse; width: 100%; }
             th, td { 
-              border: 1px solid #000; 
+              border: 0.5px solid #000; 
               padding: 4px 6px; 
               font-size: 10pt;
               vertical-align: middle;
@@ -321,7 +321,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', fontSize: '11pt', margin: '10px 0 6px 0' }}>
+            <div style={{ textAlign: 'center', fontSize: '12pt', margin: '10px 0 6px 0' }}>
               RECONCILIATION STATEMENT OF PAY & ALLOWANCES FOR THE MONTH OF
               <br />
               <em>
@@ -421,11 +421,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </tbody>
             </table>
 
-            <div style={{ marginTop: '30px' }}>
+            <div style={{ marginTop: '20px', fontSize: '12pt' }}>
               <strong>Endorsement No: _______________ Dated: _______________</strong>
             </div>
 
-            <div style={{ marginTop: '20px', fontSize: '10pt' }}>
+            <div style={{ marginTop: '20px', fontSize: '12pt' }}>
               <em
                 style={{
                   fontStyle: 'italic',
@@ -445,7 +445,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
             <div
               style={{
-                marginTop: '40px',
+                marginTop: '10px',
                 display: 'flex',
                 justifyContent: 'flex-end',
               }}
@@ -453,7 +453,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               <div style={{ textAlign: 'center' }}>
                 <div
                   style={{
-                    borderBottom: '1px solid #000',
+                    borderBottom: '0.5px solid #000',
                     width: '220px',
                     height: '50px',
                   }}
