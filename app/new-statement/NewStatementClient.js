@@ -1,279 +1,186 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
 import { createClient } from '@/lib/supabase/client';
-import { PLANS } from '@/lib/subscription';
+import { calculateStatement, getPreviousStatement, MONTH_NAMES, SECTIONS } from '@/lib/utils';
 
-// ⚠️ Apna Easypaisa number yahan daalo
-const EASYPAISA_NUMBER = '0348-9443339';
-const EASYPAISA_NAME = 'Usama Azam';
-const WHATSAPP_NUMBER = '923489443339'; // 92 ke saath, bina +
-
-export default function PricingClient({ userEmail, userId, currentSubscription }) {
+export default function NewStatementClient({ userEmail, school, heads, statements }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const supabase = createClient();
+  const [loading, setLoading] = useState(false);
 
-  const [billingCycle, setBillingCycle] = useState('yearly');
-  const [selectedPlan, setSelectedPlan] = useState(null);
-  const [transactionId, setTransactionId] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  // Smart defaults: next month after the latest one
+  const today = new Date();
+  let defaultMonth = today.getMonth() + 1;
+  let defaultYear = today.getFullYear();
 
-  // Check if user was redirected here because expired
-  const isExpired = searchParams?.get('expired') === 'true';
+  if (statements.length > 0) {
+    const latest = statements[0];
+    let nm = latest.month_num + 1;
+    let ny = latest.year;
+    if (nm > 12) {
+      nm = 1;
+      ny++;
+    }
+    defaultMonth = nm;
+    defaultYear = ny;
+  }
 
-  const basicPlan = billingCycle === 'monthly' ? PLANS.basic_monthly : PLANS.basic_yearly;
-  const multiPlan = billingCycle === 'monthly' ? PLANS.multi_monthly : PLANS.multi_yearly;
+  const [month, setMonth] = useState(defaultMonth);
+  const [year, setYear] = useState(defaultYear);
+  const [amounts, setAmounts] = useState({});
 
-  const handleSelectPlan = (plan) => {
-    setSelectedPlan(plan);
-    setSubmitted(false);
-    setTransactionId('');
-  };
+  // Get heads by section helper
+  const getHeadsBySection = (sectionId) => heads.filter((h) => h.section === sectionId);
 
-  const handleSubmitPayment = async () => {
-    if (!transactionId.trim()) {
-      alert('⚠️ Transaction ID ya reference daalein');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const previousStatement = getPreviousStatement(statements, year, month);
+    const calc = calculateStatement(amounts, previousStatement, heads);
+
+    const statementData = {
+      school_id: school.id,
+      year,
+      month_num: month,
+      month_name: MONTH_NAMES[month],
+      data: {
+        month_year: `${MONTH_NAMES[month].toUpperCase()} ${year}`,
+        ...calc,
+      },
+    };
+
+    const supabase = createClient();
+
+    const existing = statements.find((s) => s.year === year && s.month_num === month);
+
+    let result;
+    if (existing) {
+      result = await supabase
+        .from('statements')
+        .update({ data: statementData.data })
+        .eq('id', existing.id)
+        .select()
+        .single();
+    } else {
+      result = await supabase
+        .from('statements')
+        .insert(statementData)
+        .select()
+        .single();
+    }
+
+    if (result.error) {
+      alert('Error: ' + result.error.message);
+      setLoading(false);
       return;
     }
 
-    setSubmitting(true);
-
-    const { error: reqError } = await supabase.from('payment_requests').insert({
-      user_id: userId,
-      plan: selectedPlan.id,
-      amount: selectedPlan.price,
-      payment_method: 'easypaisa',
-      transaction_id: transactionId.trim(),
-      status: 'pending',
-    });
-
-    if (reqError) {
-      alert('Error: ' + reqError.message);
-      setSubmitting(false);
-      return;
-    }
-
-    await supabase.from('subscriptions').upsert({
-      user_id: userId,
-      plan: selectedPlan.id,
-      status: 'pending',
-      payment_method: 'easypaisa',
-      payment_reference: transactionId.trim(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' });
-
-    setSubmitting(false);
-    setSubmitted(true);
+    router.push(`/statement/${result.data.id}`);
   };
 
-  const whatsappLink = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-    `Assalam o Alaikum! Maine payment ki hai.\nPlan: ${selectedPlan?.name}\nAmount: Rs. ${selectedPlan?.price}\nEmail: ${userEmail}\nTransaction ID: ${transactionId}`
-  )}`;
+  const renderInputRow = (head) => (
+    <div key={head.id} className="grid grid-cols-12 gap-3 items-center">
+      <div className="col-span-2 font-mono text-sm text-gray-600">{head.code}</div>
+      <div className="col-span-7 text-sm">{head.name}</div>
+      <div className="col-span-3">
+        <input
+          type="number"
+          step="0.01"
+          placeholder="0"
+          value={amounts[head.code] || ''}
+          onChange={(e) => setAmounts({ ...amounts, [head.code]: e.target.value })}
+          className="w-full px-3 py-2 border border-gray-300 rounded text-right"
+        />
+      </div>
+    </div>
+  );
+
+  // Section icons + colors
+  const sectionStyles = {
+    pays: { icon: '💰', bg: 'bg-white' },
+    allowances: { icon: '🎁', bg: 'bg-gray-50' },
+    non_salary: { icon: '🛠️', bg: 'bg-white' },
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation userEmail={userEmail} />
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Expired warning banner */}
-        {isExpired && (
-          <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="text-3xl">🔒</div>
+      <main className="max-w-4xl mx-auto px-4 py-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">📄 New Monthly Statement</h1>
+        <p className="text-gray-600 mb-6">
+          Sirf <strong>"This Month"</strong> ka data fill karein. Previous, Total, Saving, Excess sab automatic.
+        </p>
+
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow">
+          {/* Month selector */}
+          <div className="p-6 border-b bg-gray-50 rounded-t-lg">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <div className="font-bold text-red-900">Subscription Khatam Ho Gaya!</div>
-                <div className="text-sm text-red-800 mt-1">
-                  Naye statements banane ke liye **renew** karein. Aapke purane statements safe hain.
-                </div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Month *</label>
+                <select
+                  value={month}
+                  onChange={(e) => setMonth(parseInt(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                >
+                  {MONTH_NAMES.slice(1).map((m, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Year *</label>
+                <input
+                  type="number"
+                  value={year}
+                  onChange={(e) => setYear(parseInt(e.target.value))}
+                  min="2020"
+                  max="2050"
+                  className="w-full px-3 py-2 border border-gray-300 rounded"
+                />
               </div>
             </div>
           </div>
-        )}
 
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Apna Plan Chunein</h1>
-          <p className="text-gray-600">Rs. 10/day se bhi sasta — ek chai ki keemat!</p>
-        </div>
+          {/* Render all 3 sections dynamically */}
+          {SECTIONS.map((section, index) => {
+            const sectionHeads = getHeadsBySection(section.id);
+            if (sectionHeads.length === 0) return null;
 
-        {/* Billing toggle */}
-        <div className="flex justify-center mb-8">
-          <div className="bg-white rounded-lg shadow p-1 inline-flex">
-            <button
-              onClick={() => setBillingCycle('monthly')}
-              className={`px-6 py-2 rounded-md font-medium transition ${
-                billingCycle === 'monthly'
-                  ? 'bg-emerald-600 text-white'
-                  : 'text-gray-600'
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBillingCycle('yearly')}
-              className={`px-6 py-2 rounded-md font-medium transition ${
-                billingCycle === 'yearly'
-                  ? 'bg-emerald-600 text-white'
-                  : 'text-gray-600'
-              }`}
-            >
-              Yearly <span className="text-xs">(2 months free)</span>
-            </button>
-          </div>
-        </div>
+            const style = sectionStyles[section.id];
+            const isAlternate = index % 2 === 1;
 
-        {/* Plan cards */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Basic Plan */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-emerald-500 relative">
-            {billingCycle === 'yearly' && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-bold">
-                ⭐ POPULAR
-              </div>
-            )}
-            <h3 className="text-xl font-bold text-gray-800">{basicPlan.name}</h3>
-            <div className="my-4">
-              <span className="text-4xl font-bold text-emerald-600">Rs. {basicPlan.price.toLocaleString()}</span>
-              <span className="text-gray-500">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
-            </div>
-            {basicPlan.badge && (
-              <div className="text-sm text-emerald-700 font-medium mb-2">✨ {basicPlan.badge}</div>
-            )}
-            <ul className="space-y-2 text-sm text-gray-600 my-4">
-              <li>✅ 1 School</li>
-              <li>✅ Unlimited statements</li>
-              <li>✅ PDF generation</li>
-              <li>✅ All sections (Pays, Allowances, Non-Salary)</li>
-            </ul>
-            <button
-              onClick={() => handleSelectPlan(basicPlan)}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg"
-            >
-              Select Plan
-            </button>
-          </div>
-
-          {/* Multi Plan */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
-            <h3 className="text-xl font-bold text-gray-800">{multiPlan.name}</h3>
-            <div className="my-4">
-              <span className="text-4xl font-bold text-gray-800">Rs. {multiPlan.price.toLocaleString()}</span>
-              <span className="text-gray-500">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
-            </div>
-            {multiPlan.badge && (
-              <div className="text-sm text-emerald-700 font-medium mb-2">✨ {multiPlan.badge}</div>
-            )}
-            <ul className="space-y-2 text-sm text-gray-600 my-4">
-              <li>✅ Up to 5 Schools</li>
-              <li>✅ Unlimited statements</li>
-              <li>✅ PDF generation</li>
-              <li>✅ Priority support</li>
-            </ul>
-            <button
-              onClick={() => handleSelectPlan(multiPlan)}
-              className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-lg"
-            >
-              Select Plan
-            </button>
-          </div>
-        </div>
-
-        {/* Payment Instructions */}
-        {selectedPlan && !submitted && (
-          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-blue-300">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">
-              💳 Payment Instructions - {selectedPlan.name}
-            </h3>
-
-            <div className="bg-blue-50 rounded-lg p-4 mb-4">
-              <div className="text-sm space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Amount to Pay:</span>
-                  <span className="font-bold text-lg">Rs. {selectedPlan.price.toLocaleString()}</span>
-                </div>
-                <div className="border-t pt-2 mt-2">
-                  <div className="font-bold text-emerald-700 mb-1">📱 Easypaisa Details:</div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Number:</span>
-                    <span className="font-mono font-bold">{EASYPAISA_NUMBER}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Name:</span>
-                    <span className="font-medium">{EASYPAISA_NAME}</span>
-                  </div>
+            return (
+              <div
+                key={section.id}
+                className={`p-6 ${isAlternate ? 'bg-gray-50' : 'bg-white'} ${index > 0 ? 'border-t' : ''}`}
+              >
+                <h2 className="font-bold text-lg text-gray-800 mb-3 pb-2 border-b">
+                  {style.icon} {section.label}
+                </h2>
+                <div className="space-y-2">
+                  {sectionHeads.map(renderInputRow)}
                 </div>
               </div>
-            </div>
+            );
+          })}
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4 text-sm text-yellow-800">
-              <strong>Steps:</strong>
-              <ol className="list-decimal pl-5 mt-2 space-y-1">
-                <li>Upar diye number pe <strong>Rs. {selectedPlan.price}</strong> Easypaisa karein</li>
-                <li>Transaction ID / reference niche daalein</li>
-                <li>"Submit" karein</li>
-                <li>WhatsApp pe screenshot bhejein (faster activation)</li>
-                <li>Admin verify karke account activate karega (usually 1-2 hours)</li>
-              </ol>
-            </div>
-
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Transaction ID / Reference *
-            </label>
-            <input
-              type="text"
-              value={transactionId}
-              onChange={(e) => setTransactionId(e.target.value)}
-              placeholder="Easypaisa transaction ID daalein"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg mb-4"
-            />
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setSelectedPlan(null)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitPayment}
-                disabled={submitting}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-lg disabled:opacity-50"
-              >
-                {submitting ? 'Submitting...' : 'Submit Payment'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Success message */}
-        {submitted && (
-          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-emerald-300 text-center">
-            <div className="text-5xl mb-4">✅</div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">Payment Submitted!</h3>
-            <p className="text-gray-600 mb-4">
-              Aapki payment verify ho rahi hai. Admin 1-2 ghante mein activate karega.
-            </p>
-            <a
-              href={whatsappLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg"
+          {/* Submit */}
+          <div className="p-6 border-t bg-white rounded-b-lg">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded text-lg disabled:opacity-50"
             >
-              📱 WhatsApp pe Screenshot Bhejein (Faster!)
-            </a>
-            <div className="mt-4">
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="text-gray-600 underline"
-              >
-                Dashboard pe wapas jaayein
-              </button>
-            </div>
+              {loading ? 'Saving...' : 'Generate Statement →'}
+            </button>
           </div>
-        )}
+        </form>
       </main>
     </div>
   );
