@@ -18,7 +18,7 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
   const [processing, setProcessing] = useState(null);
   const [tab, setTab] = useState('pending');
 
-  // APPROVE PAYMENT (with referral reward)
+  // APPROVE PAYMENT (with referral reward + trial days preservation)
   const handleApprove = async (request) => {
     const bonusMsg = request.will_give_bonus 
       ? `\n\n🎁 ${request.referrer_email} ko ${REFERRAL_BONUS_DAYS} din free subscription bhi milegi (referral bonus).`
@@ -36,16 +36,24 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
     }
 
     // ============================================================
-    // 1. ACTIVATE REFEREE'S SUBSCRIPTION (existing logic)
+    // 1. FETCH CURRENT SUBSCRIPTION (including trial_ends_at)
     // ============================================================
     const { data: currentSub } = await supabase
       .from('subscriptions')
-      .select('expires_at')
+      .select('expires_at, trial_ends_at, status')
       .eq('user_id', request.user_id)
       .single();
 
-    const newExpiry = calculateNewExpiry(currentSub?.expires_at, plan.duration_days);
+    // SMART EXPIRY: Preserve trial days if user was on trial
+    const newExpiry = calculateNewExpiry(
+      currentSub?.expires_at,
+      plan.duration_days,
+      currentSub?.trial_ends_at  // ← NEW: Trial baqi din save karta hai
+    );
 
+    // ============================================================
+    // 2. ACTIVATE REFEREE'S SUBSCRIPTION
+    // ============================================================
     const { error: subError } = await supabase
       .from('subscriptions')
       .update({
@@ -76,7 +84,7 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       .eq('id', request.id);
 
     // ============================================================
-    // 2. REFERRAL REWARD - Give 60 days to referrer
+    // 3. REFERRAL REWARD - Give 60 days to referrer
     // ============================================================
     let referralBonusMsg = '';
 
@@ -84,22 +92,20 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       try {
         const referrerId = request.profiles.referred_by;
 
-        // Get referrer's current subscription
+        // Get referrer's current subscription (with trial info)
         const { data: referrerSub } = await supabase
           .from('subscriptions')
           .select('expires_at, trial_ends_at, status')
           .eq('user_id', referrerId)
           .single();
 
-        // Calculate new expiry for referrer
-        // If they have active subscription, extend from current expiry
-        // If they're on trial or expired, start from now
-        let baseDate = null;
-        if (referrerSub?.status === 'active' && referrerSub?.expires_at) {
-          baseDate = referrerSub.expires_at;
-        }
-        
-        const referrerNewExpiry = calculateNewExpiry(baseDate, REFERRAL_BONUS_DAYS);
+        // Smart calculation - bonus days extend from current end
+        // OR trial end (whichever is later)
+        const referrerNewExpiry = calculateNewExpiry(
+          referrerSub?.expires_at,
+          REFERRAL_BONUS_DAYS,
+          referrerSub?.trial_ends_at
+        );
 
         // Update referrer's subscription
         await supabase
@@ -128,9 +134,20 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       }
     }
 
+    // Show success with details about trial preservation
+    let trialMsg = '';
+    if (currentSub?.status === 'trial' && currentSub?.trial_ends_at) {
+      const trialEnd = new Date(currentSub.trial_ends_at);
+      const now = new Date();
+      if (trialEnd > now) {
+        const trialDaysLeft = Math.ceil((trialEnd - now) / (1000 * 60 * 60 * 24));
+        trialMsg = `\n✨ Trial ke baqi ${trialDaysLeft} din bhi add ho gaye hain!`;
+      }
+    }
+
     setRequests(requests.filter((r) => r.id !== request.id));
     setProcessing(null);
-    alert(`✅ ${request.profiles?.email} activated! Expires: ${formatDate(newExpiry)}${referralBonusMsg}`);
+    alert(`✅ ${request.profiles?.email} activated! Expires: ${formatDate(newExpiry)}${trialMsg}${referralBonusMsg}`);
 
     router.refresh();
   };
@@ -170,7 +187,18 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
 
     setProcessing(sub.user_id);
 
-    const newExpiry = calculateNewExpiry(sub.expires_at, parseInt(days));
+    // Get fresh subscription with trial info
+    const { data: currentSub } = await supabase
+      .from('subscriptions')
+      .select('expires_at, trial_ends_at')
+      .eq('user_id', sub.user_id)
+      .single();
+
+    const newExpiry = calculateNewExpiry(
+      currentSub?.expires_at, 
+      parseInt(days),
+      currentSub?.trial_ends_at
+    );
 
     await supabase
       .from('subscriptions')
