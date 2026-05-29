@@ -8,12 +8,13 @@ import { formatNumber } from '@/lib/utils';
 export default function ViewStatementClient({ userEmail, school, statement }) {
   const router = useRouter();
   const [downloading, setDownloading] = useState(false);
+  
+  // NEW: Print mode toggle
+  const [printMode, setPrintMode] = useState('fit'); // 'fit' (1 page) or 'normal' (multi-page)
 
   const data = statement.data;
 
-  // ============================================================
   // FILTER: Sirf wo heads dikhao jin mein koi value ho
-  // ============================================================
   const hasData = (item) => {
     const budget = parseFloat(item.budget) || 0;
     const thisMonth = parseFloat(item.this_month) || 0;
@@ -25,7 +26,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   const filteredAllowances = (data.allowances || []).filter(hasData);
   const filteredNonSalary = (data.non_salary || []).filter(hasData);
 
-  // AUTO-FIT TO ONE A4 PAGE
+  // AUTO-FIT calculation for 1-page mode
   const calculateScaleFactor = (element) => {
     const A4_USABLE_HEIGHT_PX = 1010;
     const contentHeight = element.scrollHeight;
@@ -41,40 +42,69 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       const element = document.getElementById('pdfContent');
       const filename = `Expenditure_${statement.month_name}_${statement.year}.pdf`;
 
-      const scale = calculateScaleFactor(element);
+      let opt;
 
-      const originalTransform = element.style.transform;
-      const originalTransformOrigin = element.style.transformOrigin;
-      const originalWidth = element.style.width;
+      if (printMode === 'fit') {
+        // === FIT TO 1 PAGE MODE ===
+        const scale = calculateScaleFactor(element);
 
-      if (scale < 1.0) {
-        element.style.transform = `scale(${scale})`;
-        element.style.transformOrigin = 'top left';
-        element.style.width = `${100 / scale}%`;
+        const originalTransform = element.style.transform;
+        const originalTransformOrigin = element.style.transformOrigin;
+        const originalWidth = element.style.width;
+
+        if (scale < 1.0) {
+          element.style.transform = `scale(${scale})`;
+          element.style.transformOrigin = 'top left';
+          element.style.width = `${100 / scale}%`;
+        }
+
+        opt = {
+          margin: 10,
+          filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            windowHeight: element.scrollHeight,
+          },
+          jsPDF: {
+            unit: 'mm',
+            format: 'a4',
+            orientation: 'portrait',
+          },
+          pagebreak: { mode: 'avoid-all' },
+        };
+
+        await html2pdf().set(opt).from(element).save();
+
+        // Restore styles
+        element.style.transform = originalTransform;
+        element.style.transformOrigin = originalTransformOrigin;
+        element.style.width = originalWidth;
+      } else {
+        // === NORMAL MULTI-PAGE MODE ===
+        // Content naturally flows across pages with proper margins
+        opt = {
+          margin: [10, 10, 10, 10], // top, right, bottom, left (mm)
+          filename,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+          },
+          jsPDF: {
+            unit: 'mm',
+            format: 'a4',
+            orientation: 'portrait',
+          },
+          pagebreak: { 
+            mode: ['css', 'legacy'],
+            avoid: ['tr', '.subtotal', '.grand-total'] // Try to keep rows intact
+          },
+        };
+
+        await html2pdf().set(opt).from(element).save();
       }
-
-      const opt = {
-        margin: 0,
-        filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          windowHeight: element.scrollHeight,
-        },
-        jsPDF: {
-          unit: 'mm',
-          format: 'a4',
-          orientation: 'portrait',
-        },
-        pagebreak: { mode: 'avoid-all' },
-      };
-
-      await html2pdf().set(opt).from(element).save();
-
-      element.style.transform = originalTransform;
-      element.style.transformOrigin = originalTransformOrigin;
-      element.style.width = originalWidth;
     } catch (err) {
       alert('PDF generation failed: ' + err.message);
     } finally {
@@ -84,9 +114,20 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
   const handlePrint = () => {
     const element = document.getElementById('pdfContent');
-    const scale = calculateScaleFactor(element);
     const printContent = element.innerHTML;
     const printWindow = window.open('', '_blank');
+
+    let scaleStyle = '';
+    if (printMode === 'fit') {
+      const scale = calculateScaleFactor(element);
+      scaleStyle = `
+        .print-container {
+          transform: scale(${scale});
+          transform-origin: top left;
+          width: ${100 / scale}%;
+        }
+      `;
+    }
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -94,27 +135,25 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         <head>
           <title>Print Statement</title>
           <style>
-            @page { size: A4; margin: 15mm; }
+            @page { 
+              size: A4; 
+              margin: 10mm; 
+            }
             html, body { margin: 0; padding: 0; }
             body { font-family: 'Times New Roman', serif; color: #000; }
-            .print-container {
-              transform: scale(${scale});
-              transform-origin: top left;
-              width: ${100 / scale}%;
-            }
+            ${scaleStyle}
             table { border-collapse: collapse; width: 100%; }
             th, td { border: 1px solid #000; padding: 4px 6px; font-size: 10pt; }
             th { background: #d0d0d0; font-weight: bold; text-align: center; }
             .section-divider { background: #000 !important; color: white !important; font-weight: bold; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .subtotal { background: #b8b8b8 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .grand-total { background: #000 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            @media print {
-              .print-container { page-break-inside: avoid; }
-            }
+            tr { page-break-inside: avoid; }
+            ${printMode === 'fit' ? '.print-container { page-break-inside: avoid; }' : ''}
           </style>
         </head>
         <body>
-          <div class="print-container">${printContent}</div>
+          ${printMode === 'fit' ? `<div class="print-container">${printContent}</div>` : printContent}
         </body>
       </html>
     `);
@@ -155,14 +194,14 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       <Navigation userEmail={userEmail} />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
               📄 {statement.month_name} {statement.year}
             </h1>
             <p className="text-gray-600">Reconciliation Statement</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={handleDownloadPDF}
               disabled={downloading}
@@ -185,8 +224,44 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           </div>
         </div>
 
+        {/* PRINT MODE TOGGLE */}
+        <div className="bg-white rounded-lg shadow p-4 mb-4 border border-gray-200">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <div className="font-semibold text-gray-800 mb-1">🖨️ Print Mode</div>
+              <div className="text-xs text-gray-600">
+                {printMode === 'fit'
+                  ? 'Sab content ek A4 page pe fit ho jayega (chota size)'
+                  : 'Normal size, multiple pages pe distribute hoga'}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPrintMode('fit')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  printMode === 'fit'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                📄 1 Page (Fit)
+              </button>
+              <button
+                onClick={() => setPrintMode('normal')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  printMode === 'normal'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                📑 Multi-Page (Normal)
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
-          📄 <strong>Smart Display:</strong> Sirf {totalRows} heads dikhaye ja rahe hain jin mein data hai. Khaali heads automatically hide ho gaye.
+          📄 <strong>Smart Display:</strong> {totalRows} heads dikhaye ja rahe hain. Khaali heads auto-hide.
         </div>
 
         {/* Summary cards */}
@@ -285,7 +360,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 </tr>
               </thead>
               <tbody>
-                {/* PAYS section */}
                 {filteredPays.length > 0 && (
                   <>
                     <tr>
@@ -297,7 +371,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                   </>
                 )}
 
-                {/* ALLOWANCES section */}
                 {filteredAllowances.length > 0 && (
                   <>
                     <tr>
@@ -309,7 +382,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                   </>
                 )}
 
-                {/* NON-SALARY section */}
                 {filteredNonSalary.length > 0 && (
                   <>
                     <tr>
@@ -321,7 +393,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                   </>
                 )}
 
-                {/* Grand Total */}
                 <tr className="grand-total">
                   <td><strong>GRAND TOTAL</strong></td>
                   <td style={{ textAlign: 'right' }}>
@@ -391,7 +462,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 <div style={{ marginTop: '5px' }}>
                   <strong>{school.principal_designation}</strong>
                 </div>
-                <div style={{textTransform: 'capitalize'}}>{school.name?.toLowerCase()}</div>
+                <div>{school.name}</div>
               </div>
             </div>
           </div>
