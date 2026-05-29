@@ -25,7 +25,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   const totalRows = filteredPays.length + filteredAllowances.length + filteredNonSalary.length;
 
   const getCompactStyles = (rows) => {
-    // Minimum 7pt - chote pe strikethrough glitch aata hai PDF mein
     if (rows <= 10) return { fontSize: 10, rowPadding: '3px 5px', headerSize: 14, titleSize: 10 };
     if (rows <= 15) return { fontSize: 9, rowPadding: '2.5px 4px', headerSize: 13, titleSize: 9 };
     if (rows <= 20) return { fontSize: 8.5, rowPadding: '2px 4px', headerSize: 12, titleSize: 8 };
@@ -34,119 +33,10 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
     return { fontSize: 7, rowPadding: '0.5px 2px', headerSize: 9, titleSize: 6 };
   };
 
-  const handleDownloadPDF = async () => {
-    setDownloading(true);
-    try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const original = document.getElementById('pdfContent');
-      const filename = `Expenditure_${statement.month_name}_${statement.year}.pdf`;
-
-      const clone = original.cloneNode(true);
-
-      if (printMode === 'fit') {
-        const styles = getCompactStyles(totalRows);
-
-        const styleEl = document.createElement('style');
-        styleEl.textContent = `
-          .pdf-content {
-            font-size: ${styles.fontSize}pt !important;
-            -webkit-font-smoothing: antialiased !important;
-            -moz-osx-font-smoothing: grayscale !important;
-            text-rendering: geometricPrecision !important;
-          }
-          .pdf-content table {
-            border-collapse: collapse !important;
-            width: 100% !important;
-          }
-          .pdf-content table td,
-          .pdf-content table th,
-          .pdf-content table td * {
-            font-size: ${styles.fontSize}pt !important;
-            padding: ${styles.rowPadding} !important;
-            vertical-align: middle !important;
-            line-height: 1.4 !important;
-            text-decoration: none !important;
-            -webkit-text-stroke: 0 !important;
-          }
-          .pdf-content table th {
-            font-weight: bold !important;
-          }
-          .pdf-content [style*="18pt"] {
-            font-size: ${styles.headerSize}pt !important;
-          }
-          .pdf-content [style*="14pt"] {
-            font-size: ${styles.titleSize + 1}pt !important;
-          }
-          .pdf-content [style*="11pt"] {
-            font-size: ${styles.titleSize}pt !important;
-          }
-          .pdf-content [style*="10pt"] {
-            font-size: ${styles.titleSize - 1}pt !important;
-          }
-          .pdf-content [style*="marginTop"] {
-            margin-top: 6px !important;
-          }
-        `;
-        clone.insertBefore(styleEl, clone.firstChild);
-      } else {
-        // Normal mode: also enforce consistency
-        const styleEl = document.createElement('style');
-        styleEl.textContent = `
-          .pdf-content table td,
-          .pdf-content table th,
-          .pdf-content table td * {
-            font-size: 10pt !important;
-            vertical-align: middle !important;
-            line-height: 1.4 !important;
-          }
-        `;
-        clone.insertBefore(styleEl, clone.firstChild);
-      }
-
-      const tempContainer = document.createElement('div');
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '200mm';
-      tempContainer.appendChild(clone);
-      document.body.appendChild(tempContainer);
-
-      const opt = {
-        margin: 5,
-        filename,
-        image: { type: 'jpeg', quality: 1.0 },
-        html2canvas: {
-          scale: 4,           // Pehle 2 tha - ab 4 (sharper text, no strikethrough)
-          useCORS: true,
-          letterRendering: true,
-          allowTaint: true,
-          dpi: 300,
-        },
-        jsPDF: {
-          unit: 'mm',
-          format: 'a4',
-          orientation: 'portrait',
-          compress: true,
-        },
-        pagebreak: printMode === 'fit'
-          ? { mode: 'avoid-all' }
-          : { mode: ['css', 'legacy'], avoid: ['tr'] },
-      };
-
-      await html2pdf().set(opt).from(clone).save();
-
-      document.body.removeChild(tempContainer);
-    } catch (err) {
-      alert('PDF generation failed: ' + err.message);
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  const handlePrint = () => {
+  // Build print/PDF HTML - used by both Print AND PDF (1-page fit) methods
+  const buildPrintHTML = (forPrint = true) => {
     const element = document.getElementById('pdfContent');
     const printContent = element.innerHTML;
-    const printWindow = window.open('', '_blank');
 
     let compactStyles = '';
     if (printMode === 'fit') {
@@ -175,37 +65,116 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       `;
     }
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Print Statement</title>
-          <style>
-            @page { size: A4; margin: 5mm; }
-            html, body { margin: 0; padding: 0; }
-            body { font-family: 'Times New Roman', serif; color: #000; }
-            table { border-collapse: collapse; width: 100%; }
-            th, td { 
-              border: 1px solid #000; 
-              padding: 4px 6px; 
-              vertical-align: middle;
-            }
-            th { background: #d0d0d0; font-weight: bold; text-align: center; }
-            .section-divider { background: #000 !important; color: white !important; font-weight: bold; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .subtotal { background: #b8b8b8 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .grand-total { background: #000 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            tr { page-break-inside: avoid; }
-            ${compactStyles}
-          </style>
-        </head>
-        <body>${printContent}</body>
-      </html>
-    `);
+    const filename = `Expenditure_${statement.month_name}_${statement.year}`;
+
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <title>${filename}</title>
+    <style>
+      @page { size: A4; margin: 5mm; }
+      html, body { margin: 0; padding: 0; }
+      body { font-family: 'Times New Roman', serif; color: #000; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { 
+        border: 1px solid #000; 
+        padding: 4px 6px; 
+        vertical-align: middle;
+      }
+      th { background: #d0d0d0; font-weight: bold; text-align: center; }
+      .section-divider { background: #000 !important; color: white !important; font-weight: bold; text-align: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .subtotal { background: #b8b8b8 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .grand-total { background: #000 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      tr { page-break-inside: avoid; }
+      ${compactStyles}
+    </style>
+  </head>
+  <body>${printContent}</body>
+</html>`;
+  };
+
+  // PRINT - opens print dialog
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(buildPrintHTML(true));
     printWindow.document.close();
     setTimeout(() => printWindow.print(), 500);
   };
 
-  // Row with SAME font for code and name (no span override)
+  // DOWNLOAD PDF
+  // - Multi-page (normal): Use html2pdf (works fine)
+  // - 1-page (fit): Use print-to-PDF method (NO strikethrough glitch!)
+  const handleDownloadPDF = async () => {
+    setDownloading(true);
+
+    try {
+      const filename = `Expenditure_${statement.month_name}_${statement.year}`;
+
+      if (printMode === 'fit') {
+        // ============================================================
+        // 1-PAGE FIT: Use browser's print-to-PDF (clean, no glitches)
+        // User will choose "Save as PDF" in print dialog
+        // ============================================================
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(buildPrintHTML(false));
+        printWindow.document.close();
+
+        // Set filename suggestion via document title
+        printWindow.document.title = filename;
+
+        // Show instruction toast in the new window
+        setTimeout(() => {
+          // Auto-trigger print dialog - user clicks "Save as PDF" as destination
+          printWindow.print();
+        }, 500);
+
+      } else {
+        // ============================================================
+        // MULTI-PAGE: Use html2pdf (works fine for multi-page)
+        // ============================================================
+        const html2pdf = (await import('html2pdf.js')).default;
+        const original = document.getElementById('pdfContent');
+        const clone = original.cloneNode(true);
+
+        const styleEl = document.createElement('style');
+        styleEl.textContent = `
+          .pdf-content table td,
+          .pdf-content table th,
+          .pdf-content table td * {
+            font-size: 10pt !important;
+            vertical-align: middle !important;
+            line-height: 1.4 !important;
+          }
+        `;
+        clone.insertBefore(styleEl, clone.firstChild);
+
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.left = '-9999px';
+        tempContainer.style.top = '0';
+        tempContainer.style.width = '200mm';
+        tempContainer.appendChild(clone);
+        document.body.appendChild(tempContainer);
+
+        const opt = {
+          margin: 5,
+          filename: filename + '.pdf',
+          image: { type: 'jpeg', quality: 1.0 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['tr'] },
+        };
+
+        await html2pdf().set(opt).from(clone).save();
+        document.body.removeChild(tempContainer);
+      }
+    } catch (err) {
+      alert('PDF generation failed: ' + err.message);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const renderTableRow = (item) => (
     <tr key={item.code}>
       <td style={{ verticalAlign: 'middle', textAlign: 'left' }}>
@@ -245,18 +214,19 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             <p className="text-gray-600">Reconciliation Statement</p>
           </div>
           <div className="flex gap-2 flex-wrap">
+            {/* PRINT BUTTON - PROMINENT (BIG + HIGHLIGHTED) */}
+            <button
+              onClick={handlePrint}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md text-base"
+            >
+              🖨️ Print (Best Quality)
+            </button>
             <button
               onClick={handleDownloadPDF}
               disabled={downloading}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold disabled:opacity-50"
+              className="px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-semibold disabled:opacity-50"
             >
               {downloading ? '⏳ Generating...' : '⬇️ Download PDF'}
-            </button>
-            <button
-              onClick={handlePrint}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-semibold"
-            >
-              🖨️ Print
             </button>
             <button
               onClick={() => router.push('/dashboard')}
@@ -265,6 +235,12 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               ← Back
             </button>
           </div>
+        </div>
+
+        {/* PRO TIP for users */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-900">
+          💡 <strong>Tip:</strong> Best quality ke liye <strong>"🖨️ Print (Best Quality)"</strong> button use karein. 
+          Print dialog mein <strong>"Save as PDF"</strong> select karke PDF bhi bana sakte hain — bilkul clean output milta hai!
         </div>
 
         <div className="bg-white rounded-lg shadow p-4 mb-4 border border-gray-200">
@@ -505,7 +481,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         </div>
       </main>
 
-      {/* Global table styles - consistent height + alignment */}
       <style jsx global>{`
         .pdf-content table {
           border-collapse: collapse;
