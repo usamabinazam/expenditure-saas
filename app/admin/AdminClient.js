@@ -6,6 +6,9 @@ import Navigation from '@/components/Navigation';
 import { createClient } from '@/lib/supabase/client';
 import { PLANS, calculateNewExpiry, formatDate } from '@/lib/subscription';
 
+// Referral reward: 60 days bonus to referrer on paid approval
+const REFERRAL_BONUS_DAYS = 60;
+
 export default function AdminClient({ userEmail, pendingRequests: initialRequests, allSubscriptions: initialSubs }) {
   const router = useRouter();
   const supabase = createClient();
@@ -15,9 +18,13 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
   const [processing, setProcessing] = useState(null);
   const [tab, setTab] = useState('pending');
 
-  // APPROVE PAYMENT
+  // APPROVE PAYMENT (with referral reward)
   const handleApprove = async (request) => {
-    if (!confirm(`Approve ${request.profiles?.email} ka ${request.plan} plan?`)) return;
+    const bonusMsg = request.will_give_bonus 
+      ? `\n\n🎁 ${request.referrer_email} ko ${REFERRAL_BONUS_DAYS} din free subscription bhi milegi (referral bonus).`
+      : '';
+    
+    if (!confirm(`Approve ${request.profiles?.email} ka ${request.plan} plan?${bonusMsg}`)) return;
 
     setProcessing(request.id);
 
@@ -28,6 +35,9 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       return;
     }
 
+    // ============================================================
+    // 1. ACTIVATE REFEREE'S SUBSCRIPTION (existing logic)
+    // ============================================================
     const { data: currentSub } = await supabase
       .from('subscriptions')
       .select('expires_at')
@@ -56,6 +66,7 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       return;
     }
 
+    // Mark payment as approved
     await supabase
       .from('payment_requests')
       .update({
@@ -64,11 +75,63 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
       })
       .eq('id', request.id);
 
+    // ============================================================
+    // 2. REFERRAL REWARD - Give 60 days to referrer
+    // ============================================================
+    let referralBonusMsg = '';
+
+    if (request.will_give_bonus && request.profiles?.referred_by) {
+      try {
+        const referrerId = request.profiles.referred_by;
+
+        // Get referrer's current subscription
+        const { data: referrerSub } = await supabase
+          .from('subscriptions')
+          .select('expires_at, trial_ends_at, status')
+          .eq('user_id', referrerId)
+          .single();
+
+        // Calculate new expiry for referrer
+        // If they have active subscription, extend from current expiry
+        // If they're on trial or expired, start from now
+        let baseDate = null;
+        if (referrerSub?.status === 'active' && referrerSub?.expires_at) {
+          baseDate = referrerSub.expires_at;
+        }
+        
+        const referrerNewExpiry = calculateNewExpiry(baseDate, REFERRAL_BONUS_DAYS);
+
+        // Update referrer's subscription
+        await supabase
+          .from('subscriptions')
+          .update({
+            status: 'active',
+            expires_at: referrerNewExpiry,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', referrerId);
+
+        // Mark referral as rewarded
+        await supabase
+          .from('referrals')
+          .update({
+            status: 'rewarded',
+            referee_plan: request.plan,
+            reward_given_at: new Date().toISOString(),
+          })
+          .eq('referee_id', request.user_id);
+
+        referralBonusMsg = `\n🎁 Referral bonus given to ${request.referrer_email}!\nTheir subscription now expires: ${formatDate(referrerNewExpiry)}`;
+      } catch (err) {
+        console.error('Referral bonus failed:', err);
+        referralBonusMsg = `\n⚠️ Referral bonus could not be applied (but payment approved): ${err.message}`;
+      }
+    }
+
     setRequests(requests.filter((r) => r.id !== request.id));
     setProcessing(null);
-    alert(`✅ ${request.profiles?.email} activated! Expires: ${formatDate(newExpiry)}`);
+    alert(`✅ ${request.profiles?.email} activated! Expires: ${formatDate(newExpiry)}${referralBonusMsg}`);
 
-    // FORCE FRESH DATA - revalidate aur full refresh
     router.refresh();
   };
 
@@ -131,7 +194,6 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
     router.refresh();
   };
 
-  // MANUAL REFRESH BUTTON
   const handleRefresh = () => {
     router.refresh();
   };
@@ -181,14 +243,17 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
             ) : (
               requests.map((req) => (
                 <div key={req.id} className="bg-white rounded-lg shadow p-5">
-                  <div className="flex justify-between items-start">
-                    <div>
+                  <div className="flex justify-between items-start flex-wrap gap-3">
+                    <div className="flex-1 min-w-0">
                       <div className="font-bold text-gray-800">{req.profiles?.email || 'Unknown'}</div>
                       <div className="text-sm text-gray-600 mt-1">
                         Plan: <strong>{PLANS[req.plan]?.name || req.plan}</strong>
                       </div>
                       <div className="text-sm text-gray-600">
                         Amount: <strong>Rs. {req.amount?.toLocaleString()}</strong>
+                        {req.notes && (
+                          <span className="text-xs text-gray-500 ml-2">({req.notes})</span>
+                        )}
                       </div>
                       <div className="text-sm text-gray-600">
                         Transaction ID: <span className="font-mono">{req.transaction_id}</span>
@@ -196,6 +261,20 @@ export default function AdminClient({ userEmail, pendingRequests: initialRequest
                       <div className="text-xs text-gray-400 mt-1">
                         {formatDate(req.created_at)}
                       </div>
+
+                      {/* REFERRAL BONUS INFO */}
+                      {req.will_give_bonus && req.referrer_email && (
+                        <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg p-2 text-xs">
+                          <div className="flex items-center gap-1">
+                            <span>🎁</span>
+                            <span className="text-emerald-800">
+                              <strong>Referral Active:</strong> Approving will give{' '}
+                              <strong>{req.referrer_email}</strong> a{' '}
+                              <strong>{REFERRAL_BONUS_DAYS}-day bonus</strong>
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <button
