@@ -8,9 +8,7 @@ import { formatNumber } from '@/lib/utils';
 export default function ViewStatementClient({ userEmail, school, statement }) {
   const router = useRouter();
   const [downloading, setDownloading] = useState(false);
-  
-  // NEW: Print mode toggle
-  const [printMode, setPrintMode] = useState('fit'); // 'fit' (1 page) or 'normal' (multi-page)
+  const [printMode, setPrintMode] = useState('fit'); // 'fit' or 'normal'
 
   const data = statement.data;
 
@@ -25,86 +23,91 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   const filteredPays = (data.pays || []).filter(hasData);
   const filteredAllowances = (data.allowances || []).filter(hasData);
   const filteredNonSalary = (data.non_salary || []).filter(hasData);
+  const totalRows = filteredPays.length + filteredAllowances.length + filteredNonSalary.length;
 
-  // AUTO-FIT calculation for 1-page mode
-  const calculateScaleFactor = (element) => {
-    const A4_USABLE_HEIGHT_PX = 1010;
-    const contentHeight = element.scrollHeight;
-    if (contentHeight <= A4_USABLE_HEIGHT_PX) return 1.0;
-    const scale = (A4_USABLE_HEIGHT_PX - 20) / contentHeight;
-    return Math.max(0.5, scale);
+  // Calculate font sizes based on total rows (for fit mode)
+  const getCompactStyles = (rows) => {
+    // More rows = smaller fonts
+    if (rows <= 15) return { fontSize: 10, rowPadding: '4px 6px', headerSize: 16, titleSize: 12 };
+    if (rows <= 20) return { fontSize: 9, rowPadding: '3px 5px', headerSize: 15, titleSize: 11 };
+    if (rows <= 30) return { fontSize: 8, rowPadding: '2px 4px', headerSize: 14, titleSize: 10 };
+    if (rows <= 40) return { fontSize: 7, rowPadding: '2px 3px', headerSize: 13, titleSize: 9 };
+    return { fontSize: 6, rowPadding: '1px 3px', headerSize: 12, titleSize: 8 };
   };
 
   const handleDownloadPDF = async () => {
     setDownloading(true);
     try {
       const html2pdf = (await import('html2pdf.js')).default;
-      const element = document.getElementById('pdfContent');
+      const original = document.getElementById('pdfContent');
       const filename = `Expenditure_${statement.month_name}_${statement.year}.pdf`;
 
-      let opt;
+      // Clone the content to manipulate without affecting display
+      const clone = original.cloneNode(true);
 
       if (printMode === 'fit') {
-        // === FIT TO 1 PAGE MODE ===
-        const scale = calculateScaleFactor(element);
+        // Apply compact styles to clone for fit mode
+        const styles = getCompactStyles(totalRows);
 
-        const originalTransform = element.style.transform;
-        const originalTransformOrigin = element.style.transformOrigin;
-        const originalWidth = element.style.width;
-
-        if (scale < 1.0) {
-          element.style.transform = `scale(${scale})`;
-          element.style.transformOrigin = 'top left';
-          element.style.width = `${100 / scale}%`;
-        }
-
-        opt = {
-          margin: 10,
-          filename,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            windowHeight: element.scrollHeight,
-          },
-          jsPDF: {
-            unit: 'mm',
-            format: 'a4',
-            orientation: 'portrait',
-          },
-          pagebreak: { mode: 'avoid-all' },
-        };
-
-        await html2pdf().set(opt).from(element).save();
-
-        // Restore styles
-        element.style.transform = originalTransform;
-        element.style.transformOrigin = originalTransformOrigin;
-        element.style.width = originalWidth;
-      } else {
-        // === NORMAL MULTI-PAGE MODE ===
-        // Content naturally flows across pages with proper margins
-        opt = {
-          margin: [10, 10, 10, 10], // top, right, bottom, left (mm)
-          filename,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-          },
-          jsPDF: {
-            unit: 'mm',
-            format: 'a4',
-            orientation: 'portrait',
-          },
-          pagebreak: { 
-            mode: ['css', 'legacy'],
-            avoid: ['tr', '.subtotal', '.grand-total'] // Try to keep rows intact
-          },
-        };
-
-        await html2pdf().set(opt).from(element).save();
+        // Inject compact styles into clone
+        const styleEl = document.createElement('style');
+        styleEl.textContent = `
+          .pdf-content table, .pdf-content table td, .pdf-content table th {
+            font-size: ${styles.fontSize}pt !important;
+            padding: ${styles.rowPadding} !important;
+          }
+          .pdf-content h1, .pdf-content [style*="18pt"] {
+            font-size: ${styles.headerSize}pt !important;
+          }
+          .pdf-content [style*="14pt"] {
+            font-size: ${styles.titleSize + 1}pt !important;
+          }
+          .pdf-content [style*="11pt"] {
+            font-size: ${styles.titleSize}pt !important;
+          }
+          .pdf-content [style*="10pt"] {
+            font-size: ${styles.titleSize - 1}pt !important;
+          }
+          .pdf-content [style*="marginTop: '30px'"], 
+          .pdf-content [style*="marginTop: '40px'"],
+          .pdf-content [style*="marginTop: '20px'"] {
+            margin-top: 10px !important;
+          }
+        `;
+        clone.insertBefore(styleEl, clone.firstChild);
       }
+
+      // Create temporary container
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '190mm'; // A4 width minus margins
+      tempContainer.appendChild(clone);
+      document.body.appendChild(tempContainer);
+
+      const opt = {
+        margin: 10, // 10mm on all sides
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait',
+        },
+        pagebreak: printMode === 'fit'
+          ? { mode: 'avoid-all' }
+          : { mode: ['css', 'legacy'], avoid: ['tr'] },
+      };
+
+      await html2pdf().set(opt).from(clone).save();
+
+      // Clean up
+      document.body.removeChild(tempContainer);
     } catch (err) {
       alert('PDF generation failed: ' + err.message);
     } finally {
@@ -117,15 +120,21 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
     const printContent = element.innerHTML;
     const printWindow = window.open('', '_blank');
 
-    let scaleStyle = '';
+    let compactStyles = '';
     if (printMode === 'fit') {
-      const scale = calculateScaleFactor(element);
-      scaleStyle = `
-        .print-container {
-          transform: scale(${scale});
-          transform-origin: top left;
-          width: ${100 / scale}%;
+      const styles = getCompactStyles(totalRows);
+      compactStyles = `
+        table, table td, table th {
+          font-size: ${styles.fontSize}pt !important;
+          padding: ${styles.rowPadding} !important;
         }
+        [style*="18pt"] { font-size: ${styles.headerSize}pt !important; }
+        [style*="14pt"] { font-size: ${styles.titleSize + 1}pt !important; }
+        [style*="11pt"] { font-size: ${styles.titleSize}pt !important; }
+        [style*="10pt"] { font-size: ${styles.titleSize - 1}pt !important; }
+        [style*="marginTop: '30px'"],
+        [style*="marginTop: '40px'"],
+        [style*="marginTop: '20px'"] { margin-top: 10px !important; }
       `;
     }
 
@@ -135,13 +144,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         <head>
           <title>Print Statement</title>
           <style>
-            @page { 
-              size: A4; 
-              margin: 10mm; 
-            }
+            @page { size: A4; margin: 10mm; }
             html, body { margin: 0; padding: 0; }
             body { font-family: 'Times New Roman', serif; color: #000; }
-            ${scaleStyle}
             table { border-collapse: collapse; width: 100%; }
             th, td { border: 1px solid #000; padding: 4px 6px; font-size: 10pt; }
             th { background: #d0d0d0; font-weight: bold; text-align: center; }
@@ -149,12 +154,10 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             .subtotal { background: #b8b8b8 !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .grand-total { background: #000 !important; color: white !important; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             tr { page-break-inside: avoid; }
-            ${printMode === 'fit' ? '.print-container { page-break-inside: avoid; }' : ''}
+            ${compactStyles}
           </style>
         </head>
-        <body>
-          ${printMode === 'fit' ? `<div class="print-container">${printContent}</div>` : printContent}
-        </body>
+        <body>${printContent}</body>
       </html>
     `);
     printWindow.document.close();
@@ -186,8 +189,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       <td style={{ textAlign: 'right' }}><strong>{sub.excess ? formatNumber(sub.excess) : ''}</strong></td>
     </tr>
   );
-
-  const totalRows = filteredPays.length + filteredAllowances.length + filteredNonSalary.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -231,7 +232,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               <div className="font-semibold text-gray-800 mb-1">🖨️ Print Mode</div>
               <div className="text-xs text-gray-600">
                 {printMode === 'fit'
-                  ? 'Sab content ek A4 page pe fit ho jayega (chota size)'
+                  ? `Sab content ek A4 page pe fit (${totalRows} heads - chote font)`
                   : 'Normal size, multiple pages pe distribute hoga'}
               </div>
             </div>
@@ -295,7 +296,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         {/* PDF Preview */}
         <div className="bg-white rounded-lg shadow p-6 overflow-x-auto">
           <div id="pdfContent" className="pdf-content">
-            {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: '12px' }}>
               <div
                 style={{
@@ -343,7 +343,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
             </div>
 
-            {/* Table */}
             <table>
               <thead>
                 <tr>
@@ -419,12 +418,10 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </tbody>
             </table>
 
-            {/* Endorsement + Dated */}
             <div style={{ marginTop: '30px' }}>
               <strong>Endorsement No: _______________ Dated: _______________</strong>
             </div>
 
-            {/* Copy To section */}
             <div style={{ marginTop: '20px', fontSize: '10pt' }}>
               <em
                 style={{
@@ -443,7 +440,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </ol>
             </div>
 
-            {/* Principal Signature - bottom right */}
             <div
               style={{
                 marginTop: '40px',
