@@ -24,14 +24,13 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   const filteredNonSalary = (data.non_salary || []).filter(hasData);
   const totalRows = filteredPays.length + filteredAllowances.length + filteredNonSalary.length;
 
-  // More aggressive font sizing for fit mode
   const getCompactStyles = (rows) => {
-    if (rows <= 10) return { fontSize: 9, rowPadding: '2px 4px', headerSize: 14, titleSize: 10 };
-    if (rows <= 15) return { fontSize: 8, rowPadding: '1.5px 4px', headerSize: 13, titleSize: 9 };
-    if (rows <= 20) return { fontSize: 7, rowPadding: '1px 3px', headerSize: 12, titleSize: 8 };
-    if (rows <= 30) return { fontSize: 6, rowPadding: '0.5px 3px', headerSize: 11, titleSize: 7 };
-    if (rows <= 40) return { fontSize: 5.5, rowPadding: '0.5px 2px', headerSize: 10, titleSize: 6 };
-    return { fontSize: 5, rowPadding: '0px 2px', headerSize: 9, titleSize: 6 };
+    if (rows <= 10) return { fontSize: 9, rowPadding: '3px 5px', headerSize: 14, titleSize: 10 };
+    if (rows <= 15) return { fontSize: 8, rowPadding: '2.5px 4px', headerSize: 13, titleSize: 9 };
+    if (rows <= 20) return { fontSize: 7, rowPadding: '2px 4px', headerSize: 12, titleSize: 8 };
+    if (rows <= 30) return { fontSize: 6.5, rowPadding: '1.5px 3px', headerSize: 11, titleSize: 7 };
+    if (rows <= 40) return { fontSize: 6, rowPadding: '1px 3px', headerSize: 10, titleSize: 6 };
+    return { fontSize: 5.5, rowPadding: '0.5px 2px', headerSize: 9, titleSize: 6 };
   };
 
   const handleDownloadPDF = async () => {
@@ -51,10 +50,20 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           .pdf-content {
             font-size: ${styles.fontSize}pt !important;
           }
-          .pdf-content table, .pdf-content table td, .pdf-content table th {
+          .pdf-content table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+          }
+          .pdf-content table td,
+          .pdf-content table th,
+          .pdf-content table td * {
             font-size: ${styles.fontSize}pt !important;
             padding: ${styles.rowPadding} !important;
             vertical-align: middle !important;
+            line-height: 1.3 !important;
+          }
+          .pdf-content table th {
+            font-weight: bold !important;
           }
           .pdf-content [style*="18pt"] {
             font-size: ${styles.headerSize}pt !important;
@@ -68,11 +77,21 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           .pdf-content [style*="10pt"] {
             font-size: ${styles.titleSize - 1}pt !important;
           }
-          .pdf-content [style*="9pt"] {
-            font-size: ${styles.titleSize - 2}pt !important;
-          }
           .pdf-content [style*="marginTop"] {
             margin-top: 6px !important;
+          }
+        `;
+        clone.insertBefore(styleEl, clone.firstChild);
+      } else {
+        // Normal mode: also enforce consistency
+        const styleEl = document.createElement('style');
+        styleEl.textContent = `
+          .pdf-content table td,
+          .pdf-content table th,
+          .pdf-content table td * {
+            font-size: 10pt !important;
+            vertical-align: middle !important;
+            line-height: 1.4 !important;
           }
         `;
         clone.insertBefore(styleEl, clone.firstChild);
@@ -82,12 +101,12 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       tempContainer.style.position = 'absolute';
       tempContainer.style.left = '-9999px';
       tempContainer.style.top = '0';
-      tempContainer.style.width = '200mm'; // wider since margins reduced
+      tempContainer.style.width = '200mm';
       tempContainer.appendChild(clone);
       document.body.appendChild(tempContainer);
 
       const opt = {
-        margin: 5, // 5mm = ~half inch ka half (Tight margins on all sides)
+        margin: 5,
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: {
@@ -124,16 +143,25 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       const styles = getCompactStyles(totalRows);
       compactStyles = `
         body { font-size: ${styles.fontSize}pt !important; }
-        table, table td, table th {
+        table td, table th, table td * {
           font-size: ${styles.fontSize}pt !important;
           padding: ${styles.rowPadding} !important;
           vertical-align: middle !important;
+          line-height: 1.3 !important;
         }
         [style*="18pt"] { font-size: ${styles.headerSize}pt !important; }
         [style*="14pt"] { font-size: ${styles.titleSize + 1}pt !important; }
         [style*="11pt"] { font-size: ${styles.titleSize}pt !important; }
         [style*="10pt"] { font-size: ${styles.titleSize - 1}pt !important; }
         [style*="marginTop"] { margin-top: 6px !important; }
+      `;
+    } else {
+      compactStyles = `
+        table td, table th, table td * {
+          font-size: 10pt !important;
+          vertical-align: middle !important;
+          line-height: 1.4 !important;
+        }
       `;
     }
 
@@ -148,9 +176,8 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             body { font-family: 'Times New Roman', serif; color: #000; }
             table { border-collapse: collapse; width: 100%; }
             th, td { 
-              border: 0.5px solid #000; 
+              border: 1px solid #000; 
               padding: 4px 6px; 
-              font-size: 10pt;
               vertical-align: middle;
             }
             th { background: #d0d0d0; font-weight: bold; text-align: center; }
@@ -168,11 +195,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
     setTimeout(() => printWindow.print(), 500);
   };
 
-  // Row with proper vertical alignment
+  // Row with SAME font for code and name (no span override)
   const renderTableRow = (item) => (
     <tr key={item.code}>
-      <td style={{ verticalAlign: 'middle' }}>
-        <span style={{ fontSize: '9pt' }}>{item.code}</span>&nbsp;&nbsp;{item.name}
+      <td style={{ verticalAlign: 'middle', textAlign: 'left' }}>
+        {item.code}&nbsp;&nbsp;{item.name}
       </td>
       <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{item.budget ? formatNumber(item.budget) : ''}</td>
       <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{item.this_month ? formatNumber(item.this_month) : ''}</td>
@@ -185,7 +212,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
   const renderSubtotalRow = (label, sub) => (
     <tr className="subtotal">
-      <td style={{ verticalAlign: 'middle' }}><strong>{label}</strong></td>
+      <td style={{ verticalAlign: 'middle', textAlign: 'left' }}><strong>{label}</strong></td>
       <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{sub.budget ? formatNumber(sub.budget) : ''}</td>
       <td style={{ textAlign: 'right', verticalAlign: 'middle' }}><strong>{formatNumber(sub.this_month)}</strong></td>
       <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>{sub.previous ? formatNumber(sub.previous) : ''}</td>
@@ -321,7 +348,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', fontSize: '12pt', margin: '10px 0 6px 0' }}>
+            <div style={{ textAlign: 'center', fontSize: '11pt', margin: '10px 0 6px 0' }}>
               RECONCILIATION STATEMENT OF PAY & ALLOWANCES FOR THE MONTH OF
               <br />
               <em>
@@ -346,19 +373,19 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
             </div>
 
-            <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <table>
               <thead>
                 <tr>
-                  <th rowSpan="2" style={{ width: '28%', verticalAlign: 'middle' }}>Objects</th>
-                  <th rowSpan="2" style={{ width: '11%', verticalAlign: 'middle' }}>Sanctioned<br />Budget</th>
-                  <th colSpan="2" style={{ verticalAlign: 'middle' }}>DEPARTMENTAL FIGURE</th>
-                  <th rowSpan="2" style={{ width: '11%', verticalAlign: 'middle' }}>TOTAL</th>
-                  <th rowSpan="2" style={{ width: '10%', verticalAlign: 'middle' }}>Saving</th>
-                  <th rowSpan="2" style={{ width: '10%', verticalAlign: 'middle' }}>Excess</th>
+                  <th rowSpan="2" style={{ width: '28%' }}>Objects</th>
+                  <th rowSpan="2" style={{ width: '11%' }}>Sanctioned<br />Budget</th>
+                  <th colSpan="2">DEPARTMENTAL FIGURE</th>
+                  <th rowSpan="2" style={{ width: '11%' }}>TOTAL</th>
+                  <th rowSpan="2" style={{ width: '10%' }}>Saving</th>
+                  <th rowSpan="2" style={{ width: '10%' }}>Excess</th>
                 </tr>
                 <tr>
-                  <th style={{ width: '11%', verticalAlign: 'middle' }}>During this<br />Month</th>
-                  <th style={{ width: '10%', verticalAlign: 'middle' }}>Previous</th>
+                  <th style={{ width: '11%' }}>During this<br />Month</th>
+                  <th style={{ width: '10%' }}>Previous</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,7 +423,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 )}
 
                 <tr className="grand-total">
-                  <td style={{ verticalAlign: 'middle' }}><strong>GRAND TOTAL</strong></td>
+                  <td style={{ verticalAlign: 'middle', textAlign: 'left' }}><strong>GRAND TOTAL</strong></td>
                   <td style={{ textAlign: 'right', verticalAlign: 'middle' }}>
                     <strong>{data.grand_total.budget ? formatNumber(data.grand_total.budget) : ''}</strong>
                   </td>
@@ -421,7 +448,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </tbody>
             </table>
 
-            <div style={{ marginTop: '10px', fontSize: '10pt' }}>
+            <div style={{ marginTop: '10px' }}>
               <strong>Endorsement No: _______________ Dated: _______________</strong>
             </div>
 
@@ -453,12 +480,12 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               <div style={{ textAlign: 'center' }}>
                 <div
                   style={{
-                    borderBottom: '0.5px solid #000',
+                    borderBottom: '0.8px solid #000',
                     width: '220px',
                     height: '50px',
                   }}
                 ></div>
-                <div style={{ marginTop: '5px' }}>
+                <div style={{ marginTop: '2px' }}>
                   <strong>{school.principal_designation}</strong>
                 </div>
                 <div>{school.name}</div>
@@ -468,11 +495,12 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         </div>
       </main>
 
-      {/* Global styles for table */}
+      {/* Global table styles - consistent height + alignment */}
       <style jsx global>{`
         .pdf-content table {
           border-collapse: collapse;
           width: 100%;
+          table-layout: fixed;
         }
         .pdf-content table th,
         .pdf-content table td {
@@ -480,6 +508,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           padding: 4px 6px;
           font-size: 10pt;
           vertical-align: middle !important;
+          line-height: 1.4;
         }
         .pdf-content table th {
           background: #d0d0d0;
