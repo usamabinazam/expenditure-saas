@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  // ============================================================
+  // NO CACHING - Real-time data hamesha
+  // ============================================================
+  experimental: {
+    staleTimes: {
+      dynamic: 0,    // Dynamic routes - no cache
+      static: 0,     // Static routes - no cache
+    },
+  },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
