@@ -355,7 +355,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             <div style={{ textAlign: 'center', marginBottom: '12px' }}>
               <div
                 style={{
-                  fontSize: '24pt',
+                  fontSize: '20pt',
                   fontWeight: 'bold',
                   textDecoration: 'underline',
                 }}
@@ -364,7 +364,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
               <div
                 style={{
-                  fontSize: '24pt',
+                  fontSize: '16pt',
                   fontWeight: 'bold',
                   textDecoration: 'underline',
                   marginTop: '2px',
@@ -374,7 +374,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', fontSize: '16pt', margin: '10px 0 6px 0' }}>
+            <div style={{ textAlign: 'center', fontSize: '14pt', margin: '5px 0 0px 0' }}>
               RECONCILIATION STATEMENT OF PAY & ALLOWANCES FOR THE MONTH OF
               <br />
               <em>
@@ -386,7 +386,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                margin: '8px 0',
+                margin: '0px 0',
                 fontSize: '14pt',
               }}
             >
@@ -496,7 +496,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </ol>
             </div>
 
-            <div
+            /*<div
               style={{
                 marginTop: '0px',
                 display: 'flex',
@@ -516,7 +516,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 </div>
                 <div>{school.name}</div>
               </div>
-            </div>
+            </div>*/
           </div>
         </div>
       </main>
