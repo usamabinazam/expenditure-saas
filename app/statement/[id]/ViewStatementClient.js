@@ -28,11 +28,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   // STYLE PRESETS - 1 page fit mode (compact)
   // ============================================================
   const getFitStyles = (rows) => {
-    if (rows <= 10) return { fontSize: 10, rowPadding: '1px 5px', headerSize: 14, titleSize: 11 };
-    if (rows <= 15) return { fontSize: 9, rowPadding: '1px 4px', headerSize: 13, titleSize: 10 };
-    if (rows <= 20) return { fontSize: 8.5, rowPadding: '0.7px 4px', headerSize: 12, titleSize: 10 };
-    if (rows <= 30) return { fontSize: 8, rowPadding: '0.5px 3px', headerSize: 12, titleSize: 9 };
-    if (rows <= 40) return { fontSize: 7.5, rowPadding: '0.3px 3px', headerSize: 11, titleSize: 9 };
+    if (rows <= 10) return { fontSize: 12, rowPadding: '1px 5px', headerSize: 14, titleSize: 11 };
+    if (rows <= 15) return { fontSize: 11, rowPadding: '1px 4px', headerSize: 13, titleSize: 10 };
+    if (rows <= 20) return { fontSize: 10.5, rowPadding: '0.7px 4px', headerSize: 12, titleSize: 10 };
+    if (rows <= 30) return { fontSize: 9, rowPadding: '0.5px 3px', headerSize: 12, titleSize: 9 };
+    if (rows <= 40) return { fontSize: 8, rowPadding: '0.3px 3px', headerSize: 11, titleSize: 9 };
     return { fontSize: 7, rowPadding: '0.2px 2px', headerSize: 10, titleSize: 8 };
   };
 
