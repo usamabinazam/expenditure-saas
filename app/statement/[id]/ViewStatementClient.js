@@ -61,18 +61,18 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       `;
     } else {
       modeStyles = `
-        body { font-size: 10pt !important; }
+        body { font-size: 11pt !important; }
         table td, table th, table td * {
-          font-size: 10pt !important;
+          font-size: 11pt !important;
           padding: 3px 5px !important;
           vertical-align: middle !important;
           line-height: 1.4 !important;
         }
         .doc-title-1 { font-size: 22pt !important; }
         .doc-title-2 { font-size: 18pt !important; }
-        .doc-subtitle { font-size: 11pt !important; }
+        .doc-subtitle { font-size: 12pt !important; }
         .doc-endorsement { font-size: 12pt !important; margin-top: 12px !important; }
-        .doc-copy-section { font-size: 12pt !important; margin-top: 10px !important; }
+        .doc-copy-section { font-size: 12pt !important; margin-top: 12px !important; }
       `;
     }
 
@@ -237,26 +237,12 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               marginBottom: '4px',
-              letterSpacing: '0.5px',
+              letterSpacing: '0.7px',
             }}>
               OFFICE OF THE {school.principal_designation?.toUpperCase()} {school.name?.toUpperCase()} {school.district?.toUpperCase()}
             </div>
 
-            {/* TITLE 2 - Full width stretched */}
-            <div className="doc-title-2" style={{
-              fontWeight: 'bold',
-              textDecoration: 'underline',
-              textAlign: 'justify',
-              textAlignLast: 'justify',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              marginBottom: '8px',
-              letterSpacing: '0.5px',
-            }}>
-              {school.district?.toUpperCase()}
-            </div>
-
-            {/* SUBTITLE - Full width stretched, single line */}
+                        {/* SUBTITLE - Full width stretched, single line */}
             <div className="doc-subtitle" style={{
               textAlign: 'justify',
               textAlignLast: 'justify',
