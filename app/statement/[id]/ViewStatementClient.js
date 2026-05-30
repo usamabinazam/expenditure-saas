@@ -61,18 +61,18 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       `;
     } else {
       modeStyles = `
-        body { font-size: 11pt !important; }
+        body { font-size: 10pt !important; }
         table td, table th, table td * {
           font-size: 11pt !important;
           padding: 3px 5px !important;
           vertical-align: middle !important;
           line-height: 1.4 !important;
         }
-        .doc-title-1 { font-size: 22pt !important; }
-        .doc-title-2 { font-size: 18pt !important; }
+        .doc-title-1 { font-size: 18pt !important; }
+        .doc-title-2 { font-size: 16pt !important; }
         .doc-subtitle { font-size: 12pt !important; }
-        .doc-endorsement { font-size: 12pt !important; margin-top: 12px !important; }
-        .doc-copy-section { font-size: 12pt !important; margin-top: 12px !important; }
+        .doc-endorsement { font-size: 11pt !important; margin-top: 12px !important; }
+        .doc-copy-section { font-size: 11pt !important; margin-top: 12px !important; }
       `;
     }
 
@@ -232,8 +232,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             <div className="doc-title-1" style={{ 
               fontWeight: 'bold',
               textDecoration: 'underline',
-              textAlign: 'justify',
-              textAlignLast: 'justify',
+              fontsize: '18pt',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               marginBottom: '4px',
