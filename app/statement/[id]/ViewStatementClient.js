@@ -424,7 +424,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               overflow: 'hidden',
               margin: '6px 0',
             }}>
-              RECONCILIATION STATEMENT OF PAY &amp; ALLOWANCES FOR THE MONTH OF&nbsp;&nbsp;<em><strong>{data.month_year}</strong></em>
+              RECONCILIATION STATEMENT OF PAY AND ALLOWANCES FOR THE MONTH OF &nbsp;&nbsp;<em><strong>{data.month_year}</strong></em>
             </div>
 
             {/* Department + DDO row */}
@@ -549,7 +549,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         .pdf-content table td {
           border: 1px solid #000;
           padding: 1.3px 2px;
-          font-size: 10pt;
+          font-size: 12pt;
           vertical-align: middle !important;
           line-height: 1.4;
         }
@@ -574,11 +574,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           font-weight: bold;
         }
         /* On-screen preview sizes */
-        .pdf-content .doc-title-1 { font-size: 18pt; }
-        .pdf-content .doc-title-2 { font-size: 14pt; }
-        .pdf-content .doc-subtitle { font-size: 11pt; }
-        .pdf-content .doc-endorsement { font-size: 11pt; margin-top: 12px; }
-        .pdf-content .doc-copy-section { font-size: 10pt; margin-top: 10px; }
+        .pdf-content .doc-title-1 { font-size: 20pt; }
+        .pdf-content .doc-title-2 { font-size: 16pt; }
+        .pdf-content .doc-subtitle { font-size: 12pt; }
+        .pdf-content .doc-endorsement { font-size: 12pt; margin-top: 12px; }
+        .pdf-content .doc-copy-section { font-size: 12pt; margin-top: 10px; }
       `}</style>
     </div>
   );
