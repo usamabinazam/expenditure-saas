@@ -102,40 +102,65 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   };
 
   // DOWNLOAD PDF
-  // - Multi-page (normal): Use html2pdf (works fine)
-  // - 1-page (fit): Use print-to-PDF method (NO strikethrough glitch!)
+  // - Multi-page (normal): Use html2pdf direct download
+  // - 1-page (fit): Use html2pdf with smart scale - direct download (no print dialog)
   const handleDownloadPDF = async () => {
     setDownloading(true);
 
     try {
-      const filename = `Expenditure_${statement.month_name}_${statement.year}`;
+      const html2pdf = (await import('html2pdf.js')).default;
+      const original = document.getElementById('pdfContent');
+      const filename = `Expenditure_${statement.month_name}_${statement.year}.pdf`;
+      const clone = original.cloneNode(true);
 
       if (printMode === 'fit') {
         // ============================================================
-        // 1-PAGE FIT: Use browser's print-to-PDF (clean, no glitches)
-        // User will choose "Save as PDF" in print dialog
+        // 1-PAGE FIT: Compact CSS + high scale for sharp rendering
         // ============================================================
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(buildPrintHTML(false));
-        printWindow.document.close();
+        const styles = getCompactStyles(totalRows);
 
-        // Set filename suggestion via document title
-        printWindow.document.title = filename;
-
-        // Show instruction toast in the new window
-        setTimeout(() => {
-          // Auto-trigger print dialog - user clicks "Save as PDF" as destination
-          printWindow.print();
-        }, 500);
-
+        const styleEl = document.createElement('style');
+        styleEl.textContent = `
+          * {
+            -webkit-font-smoothing: antialiased !important;
+            text-rendering: geometricPrecision !important;
+          }
+          .pdf-content {
+            font-size: ${styles.fontSize}pt !important;
+            font-family: 'Times New Roman', serif !important;
+          }
+          .pdf-content table {
+            border-collapse: collapse !important;
+            width: 100% !important;
+          }
+          .pdf-content table td,
+          .pdf-content table th,
+          .pdf-content table td * {
+            font-size: ${styles.fontSize}pt !important;
+            padding: ${styles.rowPadding} !important;
+            vertical-align: middle !important;
+            line-height: 1.4 !important;
+            text-decoration: none !important;
+          }
+          .pdf-content table th {
+            font-weight: bold !important;
+          }
+          .pdf-content [style*="18pt"] {
+            font-size: ${styles.headerSize}pt !important;
+          }
+          .pdf-content [style*="14pt"] {
+            font-size: ${styles.titleSize + 1}pt !important;
+          }
+          .pdf-content [style*="11pt"] {
+            font-size: ${styles.titleSize}pt !important;
+          }
+          .pdf-content [style*="10pt"] {
+            font-size: ${styles.titleSize - 1}pt !important;
+          }
+        `;
+        clone.insertBefore(styleEl, clone.firstChild);
       } else {
-        // ============================================================
-        // MULTI-PAGE: Use html2pdf (works fine for multi-page)
-        // ============================================================
-        const html2pdf = (await import('html2pdf.js')).default;
-        const original = document.getElementById('pdfContent');
-        const clone = original.cloneNode(true);
-
+        // Multi-page: enforce consistent font
         const styleEl = document.createElement('style');
         styleEl.textContent = `
           .pdf-content table td,
@@ -147,27 +172,42 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           }
         `;
         clone.insertBefore(styleEl, clone.firstChild);
-
-        const tempContainer = document.createElement('div');
-        tempContainer.style.position = 'absolute';
-        tempContainer.style.left = '-9999px';
-        tempContainer.style.top = '0';
-        tempContainer.style.width = '200mm';
-        tempContainer.appendChild(clone);
-        document.body.appendChild(tempContainer);
-
-        const opt = {
-          margin: 5,
-          filename: filename + '.pdf',
-          image: { type: 'jpeg', quality: 1.0 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait', compress: true },
-          pagebreak: { mode: ['css', 'legacy'], avoid: ['tr'] },
-        };
-
-        await html2pdf().set(opt).from(clone).save();
-        document.body.removeChild(tempContainer);
       }
+
+      // Render off-screen for accurate measurement
+      const tempContainer = document.createElement('div');
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '200mm';
+      tempContainer.style.background = '#fff';
+      tempContainer.appendChild(clone);
+      document.body.appendChild(tempContainer);
+
+      const opt = {
+        margin: 5,
+        filename,
+        image: { type: 'jpeg', quality: 1.0 },
+        html2canvas: {
+          scale: 3,
+          useCORS: true,
+          letterRendering: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+        },
+        jsPDF: {
+          unit: 'mm',
+          format: 'a4',
+          orientation: 'portrait',
+          compress: true,
+        },
+        pagebreak: printMode === 'fit'
+          ? { mode: 'avoid-all' }
+          : { mode: ['css', 'legacy'], avoid: ['tr'] },
+      };
+
+      await html2pdf().set(opt).from(clone).save();
+      document.body.removeChild(tempContainer);
     } catch (err) {
       alert('PDF generation failed: ' + err.message);
     } finally {
@@ -239,8 +279,8 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
         {/* PRO TIP for users */}
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-900">
-          💡 <strong>Tip:</strong> Best quality ke liye <strong>"🖨️ Print (Best Quality)"</strong> button use karein. 
-          Print dialog mein <strong>"Save as PDF"</strong> select karke PDF bhi bana sakte hain — bilkul clean output milta hai!
+          💡 <strong>Tip:</strong> Agar PDF mein quality issue ho to <strong>"🖨️ Print"</strong> button use karein — 
+          print dialog mein <strong>"Save as PDF"</strong> destination select karke best quality PDF mil jata hai.
         </div>
 
         <div className="bg-white rounded-lg shadow p-4 mb-4 border border-gray-200">
