@@ -232,6 +232,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             <div className="doc-title-1" style={{ 
               fontWeight: 'bold',
               textDecoration: 'underline',
+              textAlign: 'center',
               fontsize: '18pt',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
