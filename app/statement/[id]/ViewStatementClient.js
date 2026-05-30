@@ -412,23 +412,10 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               marginBottom: '4px',
               letterSpacing: '0.5px',
             }}>
-              OFFICE OF THE {school.principal_designation?.toUpperCase()} {school.name?.toUpperCase()}
+              OFFICE OF THE {school.principal_designation?.toUpperCase()} {school.name?.toUpperCase()}  {school.district?.toUpperCase()}
             </div>
 
-            {/* TITLE 2 - District - FULL WIDTH STRETCH */}
-            <div className="doc-title-2" style={{
-              fontWeight: 'bold',
-              textDecoration: 'underline',
-              textAlign: 'justify',
-              textAlignLast: 'justify',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              marginBottom: '8px',
-              letterSpacing: '0.5px',
-            }}>
-              {school.district?.toUpperCase()}
-            </div>
-
+            
             {/* SUBTITLE - Reconciliation Statement - FULL WIDTH STRETCH */}
             <div className="doc-subtitle" style={{
               textAlign: 'justify',
