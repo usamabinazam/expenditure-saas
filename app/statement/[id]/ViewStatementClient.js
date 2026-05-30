@@ -60,7 +60,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         table td, table th, table td * {
           font-size: 10pt !important;
           vertical-align: middle !important;
-          line-height: 1.4 !important;
+          line-height: 1.3 !important;
         }
       `;
     }
@@ -78,7 +78,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       table { border-collapse: collapse; width: 100%; }
       th, td { 
         border: 1px solid #000; 
-        padding: 4px 6px; 
+        padding: 2px 4px; 
         vertical-align: middle;
       }
       th { background: #d0d0d0; font-weight: bold; text-align: center; }
@@ -139,7 +139,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             font-size: ${styles.fontSize}pt !important;
             padding: ${styles.rowPadding} !important;
             vertical-align: middle !important;
-            line-height: 1.4 !important;
+            line-height: 1.3 !important;
             text-decoration: none !important;
           }
           .pdf-content table th {
@@ -168,7 +168,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           .pdf-content table td * {
             font-size: 10pt !important;
             vertical-align: middle !important;
-            line-height: 1.4 !important;
+            line-height: 1.3 !important;
           }
         `;
         clone.insertBefore(styleEl, clone.firstChild);
@@ -355,7 +355,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             <div style={{ textAlign: 'center', marginBottom: '12px' }}>
               <div
                 style={{
-                  fontSize: '18pt',
+                  fontSize: '24pt',
                   fontWeight: 'bold',
                   textDecoration: 'underline',
                 }}
@@ -364,7 +364,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
               <div
                 style={{
-                  fontSize: '14pt',
+                  fontSize: '24pt',
                   fontWeight: 'bold',
                   textDecoration: 'underline',
                   marginTop: '2px',
@@ -374,7 +374,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', fontSize: '11pt', margin: '10px 0 6px 0' }}>
+            <div style={{ textAlign: 'center', fontSize: '16pt', margin: '10px 0 6px 0' }}>
               RECONCILIATION STATEMENT OF PAY & ALLOWANCES FOR THE MONTH OF
               <br />
               <em>
@@ -387,7 +387,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 display: 'flex',
                 justifyContent: 'space-between',
                 margin: '8px 0',
-                fontSize: '11pt',
+                fontSize: '14pt',
               }}
             >
               <div>
@@ -474,11 +474,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </tbody>
             </table>
 
-            <div style={{ marginTop: '10px' }}>
+            <div style={{ marginTop: '8px', fontSize: '13pt', }}>
               <strong>Endorsement No: _______________ Dated: _______________</strong>
             </div>
 
-            <div style={{ marginTop: '5px', fontSize: '10pt' }}>
+            <div style={{ marginTop: '5px', fontSize: '12pt' }}>
               <em
                 style={{
                   fontStyle: 'italic',
@@ -488,7 +488,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               >
                 Copy for information to the:
               </em>
-              <ol style={{ textTransform: 'capitalize', margin: '4px 0 0 0', paddingLeft: '25px' }}>
+              <ol style={{ fontSize: '12pt',textTransform: 'capitalize', margin: '4px 0 0 0', paddingLeft: '25px' }}>
                 <li>District Comptroller of Accounts, {school.district?.toLowerCase()}.</li>
                 <li>District Finance Office, {school.district?.toLowerCase()}.</li>
                 <li>District Education Office ({school.gender?.toLowerCase()}) {school.district?.toLowerCase()}.</li>
@@ -498,7 +498,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
             <div
               style={{
-                marginTop: '10px',
+                marginTop: '0px',
                 display: 'flex',
                 justifyContent: 'flex-end',
               }}
@@ -507,7 +507,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
                 <div
                   style={{
                     borderBottom: '1px solid #000',
-                    width: '220px',
+                    width: '180px',
                     height: '50px',
                   }}
                 ></div>
