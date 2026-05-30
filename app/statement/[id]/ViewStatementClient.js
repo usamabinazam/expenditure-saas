@@ -25,12 +25,12 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   const totalRows = filteredPays.length + filteredAllowances.length + filteredNonSalary.length;
 
   const getCompactStyles = (rows) => {
-    if (rows <= 10) return { fontSize: 10, rowPadding: '3px 5px', headerSize: 14, titleSize: 10 };
-    if (rows <= 15) return { fontSize: 9, rowPadding: '2.5px 4px', headerSize: 13, titleSize: 9 };
-    if (rows <= 20) return { fontSize: 8.5, rowPadding: '2px 4px', headerSize: 12, titleSize: 8 };
-    if (rows <= 30) return { fontSize: 8, rowPadding: '1.5px 3px', headerSize: 11, titleSize: 7 };
-    if (rows <= 40) return { fontSize: 7.5, rowPadding: '1px 3px', headerSize: 10, titleSize: 7 };
-    return { fontSize: 7, rowPadding: '0.5px 2px', headerSize: 9, titleSize: 6 };
+    if (rows <= 10) return { fontSize: 10, rowPadding: '1px 5px', headerSize: 14, titleSize: 10 };
+    if (rows <= 15) return { fontSize: 9, rowPadding: '1px 4px', headerSize: 13, titleSize: 9 };
+    if (rows <= 20) return { fontSize: 8.5, rowPadding: '0.7px 4px', headerSize: 12, titleSize: 8 };
+    if (rows <= 30) return { fontSize: 8, rowPadding: '0.5px 3px', headerSize: 11, titleSize: 7 };
+    if (rows <= 40) return { fontSize: 7.5, rowPadding: '0.3px 3px', headerSize: 10, titleSize: 7 };
+    return { fontSize: 7, rowPadding: '0.2px 2px', headerSize: 9, titleSize: 6 };
   };
 
   // Build print/PDF HTML - used by both Print AND PDF (1-page fit) methods
@@ -59,8 +59,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       compactStyles = `
         table td, table th, table td * {
           font-size: 10pt !important;
+          padding: 1.3px 2px !important;
           vertical-align: middle !important;
-          line-height: 1.3 !important;
+          line-height: 1.4 !important;
         }
       `;
     }
@@ -72,13 +73,13 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
   <head>
     <title>${filename}</title>
     <style>
-      @page { size: A4; margin: 5mm; }
+      @page { size: A4; margin: 1.5mm; }
       html, body { margin: 0; padding: 0; }
       body { font-family: 'Times New Roman', serif; color: #000; }
       table { border-collapse: collapse; width: 100%; }
       th, td { 
         border: 1px solid #000; 
-        padding: 2px 4px; 
+        padding: 1.3px 2px; 
         vertical-align: middle;
       }
       th { background: #d0d0d0; font-weight: bold; text-align: center; }
@@ -139,7 +140,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             font-size: ${styles.fontSize}pt !important;
             padding: ${styles.rowPadding} !important;
             vertical-align: middle !important;
-            line-height: 1.3 !important;
+            line-height: 1.4 !important;
             text-decoration: none !important;
           }
           .pdf-content table th {
@@ -167,8 +168,9 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           .pdf-content table th,
           .pdf-content table td * {
             font-size: 10pt !important;
+            padding: 1.3px 2px !important;
             vertical-align: middle !important;
-            line-height: 1.3 !important;
+            line-height: 1.4 !important;
           }
         `;
         clone.insertBefore(styleEl, clone.firstChild);
@@ -185,7 +187,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
       document.body.appendChild(tempContainer);
 
       const opt = {
-        margin: 5,
+        margin: 1.5,
         filename,
         image: { type: 'jpeg', quality: 1.0 },
         html2canvas: {
@@ -355,7 +357,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
             <div style={{ textAlign: 'center', marginBottom: '12px' }}>
               <div
                 style={{
-                  fontSize: '20pt',
+                  fontSize: '18pt',
                   fontWeight: 'bold',
                   textDecoration: 'underline',
                 }}
@@ -364,7 +366,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
               <div
                 style={{
-                  fontSize: '16pt',
+                  fontSize: '14pt',
                   fontWeight: 'bold',
                   textDecoration: 'underline',
                   marginTop: '2px',
@@ -374,7 +376,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', fontSize: '14pt', margin: '5px 0 0px 0' }}>
+            <div style={{ textAlign: 'center', fontSize: '11pt', margin: '10px 0 6px 0' }}>
               RECONCILIATION STATEMENT OF PAY & ALLOWANCES FOR THE MONTH OF
               <br />
               <em>
@@ -386,8 +388,8 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                margin: '0px 0',
-                fontSize: '14pt',
+                margin: '8px 0',
+                fontSize: '11pt',
               }}
             >
               <div>
@@ -474,11 +476,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </tbody>
             </table>
 
-            <div style={{ marginTop: '8px', fontSize: '13pt', }}>
+            <div style={{ marginTop: '10px' }}>
               <strong>Endorsement No: _______________ Dated: _______________</strong>
             </div>
 
-            <div style={{ marginTop: '5px', fontSize: '12pt' }}>
+            <div style={{ marginTop: '5px', fontSize: '10pt' }}>
               <em
                 style={{
                   fontStyle: 'italic',
@@ -488,7 +490,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               >
                 Copy for information to the:
               </em>
-              <ol style={{ fontSize: '12pt',textTransform: 'capitalize', margin: '4px 0 0 0', paddingLeft: '25px' }}>
+              <ol style={{ textTransform: 'capitalize', margin: '4px 0 0 0', paddingLeft: '25px' }}>
                 <li>District Comptroller of Accounts, {school.district?.toLowerCase()}.</li>
                 <li>District Finance Office, {school.district?.toLowerCase()}.</li>
                 <li>District Education Office ({school.gender?.toLowerCase()}) {school.district?.toLowerCase()}.</li>
@@ -496,27 +498,6 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               </ol>
             </div>
 
-            /*<div
-              style={{
-                marginTop: '0px',
-                display: 'flex',
-                justifyContent: 'flex-end',
-              }}
-            >
-              <div style={{ textAlign: 'center' }}>
-                <div
-                  style={{
-                    borderBottom: '1px solid #000',
-                    width: '180px',
-                    height: '50px',
-                  }}
-                ></div>
-                <div style={{ marginTop: '5px' }}>
-                  <strong>{school.principal_designation}</strong>
-                </div>
-                <div>{school.name}</div>
-              </div>
-            </div>*/
           </div>
         </div>
       </main>
@@ -530,7 +511,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
         .pdf-content table th,
         .pdf-content table td {
           border: 1px solid #000;
-          padding: 4px 6px;
+          padding: 1.3px 2px;
           font-size: 10pt;
           vertical-align: middle !important;
           line-height: 1.4;
