@@ -20,13 +20,21 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
+
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: formData.email,
       password: formData.password,
     });
 
     if (signInError) {
-      setError(signInError.message);
+      // Special message for unverified email
+      if (signInError.message.toLowerCase().includes('email not confirmed')) {
+        setError('Email verify nahi hua. Email check karein aur verification link click karein.');
+      } else if (signInError.message.toLowerCase().includes('invalid login')) {
+        setError('Galat email ya password. Phir try karein.');
+      } else {
+        setError(signInError.message);
+      }
       setLoading(false);
       return;
     }
@@ -35,32 +43,15 @@ export default function LoginPage() {
     router.refresh();
   };
 
-  const handleForgotPassword = async () => {
-    if (!formData.email) {
-      setError('Pehle email enter karein');
-      return;
-    }
-
-    const supabase = createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-      redirectTo: `${window.location.origin}/dashboard`,
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      alert('✅ Password reset link email pe bhej diya hai!');
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center px-4 py-8">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
         <Link href="/" className="block text-center mb-6">
           <div className="text-2xl font-bold text-emerald-700">📊 Expenditure Generator</div>
         </Link>
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Login</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Login</h1>
+        <p className="text-gray-600 mb-6">Apne account mein wapas aayein</p>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded mb-4 text-sm">
@@ -70,41 +61,48 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email Address *
+            </label>
             <input
               type="email"
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500"
+              placeholder="your.email@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Password *
+              </label>
+              {/* FORGOT PASSWORD LINK */}
+              <Link
+                href="/forgot-password"
+                className="text-xs text-emerald-700 hover:text-emerald-800 hover:underline font-medium"
+              >
+                Password bhool gaye?
+              </Link>
+            </div>
             <input
               type="password"
               required
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500"
+              placeholder="Apna password"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded disabled:opacity-50"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Login ho raha hai...' : 'Login'}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleForgotPassword}
-            className="w-full text-sm text-emerald-700 hover:underline"
-          >
-            Password bhool gaye?
+            {loading ? '⏳ Login ho raha hai...' : 'Login'}
           </button>
         </form>
 
