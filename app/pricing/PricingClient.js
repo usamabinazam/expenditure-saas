@@ -23,9 +23,9 @@ export default function PricingClient({
   userEmail, 
   userId, 
   currentSubscription,
-  isReferred,        // boolean - user came via referral
-  hasUsedDiscount,   // boolean - already used referral discount
-  referrerEmail,     // string - who referred them
+  isReferred,
+  hasUsedDiscount,
+  referrerEmail,
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,10 +39,8 @@ export default function PricingClient({
 
   const isExpired = searchParams?.get('expired') === 'true';
 
-  // Discount applies if user is referred AND hasn't used it yet
   const discountActive = isReferred && !hasUsedDiscount;
 
-  // Calculate price after discount
   const getDiscountedPrice = (plan) => {
     if (!discountActive) return plan.price;
     const discount = REFERRAL_DISCOUNTS[plan.id] || 0;
@@ -71,11 +69,10 @@ export default function PricingClient({
     const discountAmount = getDiscount(selectedPlan);
     const finalPrice = getDiscountedPrice(selectedPlan);
 
-    // Create payment request with discounted amount
     const { error: reqError } = await supabase.from('payment_requests').insert({
       user_id: userId,
       plan: selectedPlan.id,
-      amount: finalPrice, // Discounted amount
+      amount: finalPrice,
       payment_method: 'easypaisa',
       transaction_id: transactionId.trim(),
       status: 'pending',
@@ -90,7 +87,6 @@ export default function PricingClient({
       return;
     }
 
-    // Update subscription to pending
     await supabase.from('subscriptions').upsert({
       user_id: userId,
       plan: selectedPlan.id,
@@ -100,7 +96,6 @@ export default function PricingClient({
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
 
-    // Update referral status to indicate discount applied
     if (discountActive) {
       await supabase
         .from('referrals')
@@ -143,7 +138,7 @@ export default function PricingClient({
           </div>
         )}
 
-        {/* Referral discount banner (if applicable) */}
+        {/* Referral discount banner */}
         {discountActive && (
           <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg p-5 mb-6 shadow-lg">
             <div className="flex items-center gap-3">
@@ -161,7 +156,6 @@ export default function PricingClient({
           </div>
         )}
 
-        {/* Used discount info (if already used) */}
         {isReferred && hasUsedDiscount && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6 text-sm text-blue-800">
             ℹ️ Aapka referral discount already use ho chuka hai. Future payments pe normal price.
@@ -197,11 +191,20 @@ export default function PricingClient({
 
         {/* Plan cards */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          {/* Basic Plan */}
+          {/* ============================================================
+              BASIC PLAN
+              - Monthly: AFFORDABLE badge (orange)
+              - Yearly: POPULAR badge (emerald)
+              ============================================================ */}
           <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-emerald-500 relative">
             {billingCycle === 'yearly' && (
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-bold">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-xs px-3 py-1 rounded-full font-bold whitespace-nowrap shadow-md">
                 ⭐ POPULAR
+              </div>
+            )}
+            {billingCycle === 'monthly' && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-orange-500 text-white text-xs px-3 py-1 rounded-full font-bold whitespace-nowrap shadow-md">
+                💰 AFFORDABLE
               </div>
             )}
             <h3 className="text-xl font-bold text-gray-800">{basicPlan.name}</h3>
@@ -253,8 +256,15 @@ export default function PricingClient({
             </button>
           </div>
 
-          {/* Multi Plan */}
-          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200">
+          {/* ============================================================
+              MULTI-SCHOOL PLAN
+              - Both Monthly & Yearly: COMING SOON badge (purple)
+              - Button still works (per user requirement)
+              ============================================================ */}
+          <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-xs px-3 py-1 rounded-full font-bold whitespace-nowrap shadow-md">
+              🚧 COMING SOON
+            </div>
             <h3 className="text-xl font-bold text-gray-800">{multiPlan.name}</h3>
             <div className="my-4">
               {discountActive ? (
