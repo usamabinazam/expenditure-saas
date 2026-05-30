@@ -68,11 +68,11 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
           vertical-align: middle !important;
           line-height: 1.4 !important;
         }
-        .doc-title-1 { font-size: 18pt !important; }
-        .doc-title-2 { font-size: 14pt !important; }
+        .doc-title-1 { font-size: 22pt !important; }
+        .doc-title-2 { font-size: 18pt !important; }
         .doc-subtitle { font-size: 11pt !important; }
-        .doc-endorsement { font-size: 11pt !important; margin-top: 12px !important; }
-        .doc-copy-section { font-size: 10pt !important; margin-top: 10px !important; }
+        .doc-endorsement { font-size: 12pt !important; margin-top: 12px !important; }
+        .doc-copy-section { font-size: 12pt !important; margin-top: 10px !important; }
       `;
     }
 
@@ -239,7 +239,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               marginBottom: '4px',
               letterSpacing: '0.5px',
             }}>
-              OFFICE OF THE {school.principal_designation?.toUpperCase()} {school.name?.toUpperCase()}
+              OFFICE OF THE {school.principal_designation?.toUpperCase()} {school.name?.toUpperCase()} {school.district?.toUpperCase()}
             </div>
 
             {/* TITLE 2 - Full width stretched */}
