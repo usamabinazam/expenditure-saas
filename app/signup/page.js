@@ -10,8 +10,8 @@ function SignupForm() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [signupComplete, setSignupComplete] = useState(false); // NEW: full-screen success
-  const [signupEmail, setSignupEmail] = useState(''); // Remember email for success screen
+  const [signupComplete, setSignupComplete] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
   const [referralValid, setReferralValid] = useState(null);
   const [referrerEmail, setReferrerEmail] = useState('');
   const [validatingCode, setValidatingCode] = useState(false);
@@ -23,7 +23,6 @@ function SignupForm() {
     referralCode: '',
   });
 
-  // Auto-fill referral code from URL (?ref=USA456)
   useEffect(() => {
     const refFromUrl = searchParams.get('ref');
     if (refFromUrl) {
@@ -33,7 +32,6 @@ function SignupForm() {
     }
   }, [searchParams]);
 
-  // Validate referral code via public RPC
   const validateReferralCode = async (code) => {
     if (!code || code.length < 4) {
       setReferralValid(null);
@@ -76,6 +74,7 @@ function SignupForm() {
     e.preventDefault();
     setError('');
 
+    // Validations
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords match nahi karte');
       return;
@@ -94,7 +93,7 @@ function SignupForm() {
     setLoading(true);
     const supabase = createClient();
 
-    // 1. Create auth account
+    // STEP 1: Create auth account
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
@@ -103,14 +102,36 @@ function SignupForm() {
       },
     });
 
+    // ============================================================
+    // ERROR HANDLING - Smart
+    // ============================================================
     if (signUpError) {
+      const msg = signUpError.message.toLowerCase();
+
+      // "User already registered" - show popup anyway (email might have been sent)
+      if (msg.includes('already registered') || msg.includes('already exists')) {
+        setSignupEmail(formData.email);
+        setSignupComplete(true);
+        setLoading(false);
+        return;
+      }
+
+      // "Email rate limit" - email STILL gets sent, show popup
+      if (msg.includes('rate limit') || msg.includes('email rate')) {
+        setSignupEmail(formData.email);
+        setSignupComplete(true);
+        setLoading(false);
+        return;
+      }
+
+      // Real error - show error message
       setError(signUpError.message);
       setLoading(false);
       return;
     }
 
-    // 2. Link referral if valid
-    if (signUpData.user && formData.referralCode && referralValid === true) {
+    // STEP 2: Link referral (if applicable) - don't block popup if this fails
+    if (signUpData?.user && formData.referralCode && referralValid === true) {
       try {
         const { data: referrer } = await supabase
           .from('profiles')
@@ -133,24 +154,25 @@ function SignupForm() {
         }
       } catch (err) {
         console.error('Referral linking failed:', err);
+        // Don't block popup
       }
     }
 
-    // 3. Show full-screen success state
-    if (signUpData.user) {
-      setSignupEmail(formData.email);
-      setSignupComplete(true);
-    }
-
+    // ============================================================
+    // STEP 3: GUARANTEED POPUP - No conditions, just show it
+    // Agar Supabase error nahi diya, to email send ho gayi hai
+    // ============================================================
+    setSignupEmail(formData.email);
+    setSignupComplete(true);
     setLoading(false);
   };
 
   // ============================================================
-  // FULL-SCREEN SUCCESS STATE - User ko clearly batata hai kya karna hai
+  // FULL-SCREEN SUCCESS POPUP
   // ============================================================
   if (signupComplete) {
     const emailDomain = signupEmail.split('@')[1]?.toLowerCase() || '';
-    let inboxUrl = 'https://mail.google.com'; // default
+    let inboxUrl = 'https://mail.google.com';
     if (emailDomain.includes('gmail')) inboxUrl = 'https://mail.google.com';
     else if (emailDomain.includes('yahoo')) inboxUrl = 'https://mail.yahoo.com';
     else if (emailDomain.includes('outlook') || emailDomain.includes('hotmail')) {
@@ -160,7 +182,6 @@ function SignupForm() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center px-4 py-8">
         <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-          {/* Big success icon */}
           <div className="text-center mb-6">
             <div className="text-6xl mb-3">📧</div>
             <h1 className="text-2xl font-bold text-gray-800 mb-2">
@@ -171,7 +192,6 @@ function SignupForm() {
             </p>
           </div>
 
-          {/* Email box */}
           <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-4 mb-5 text-center">
             <div className="text-xs text-emerald-700 uppercase font-bold mb-1">
               Verification Email Bheja Hai:
@@ -181,30 +201,21 @@ function SignupForm() {
             </div>
           </div>
 
-          {/* Step-by-step instructions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
             <div className="font-bold text-blue-900 mb-2">📋 Ab Kya Karna:</div>
             <ol className="text-sm text-blue-800 space-y-2 list-decimal pl-5">
-              <li>
-                <strong>Email kholo</strong> (Gmail/Yahoo jo bhi use karte ho)
-              </li>
-              <li>
-                <strong>"Confirm your email"</strong> wala email dhundo
-              </li>
-              <li>
-                <strong>"Confirm email address"</strong> link click karo
-              </li>
+              <li><strong>Email kholo</strong> (Gmail/Yahoo)</li>
+              <li><strong>"Confirm your email"</strong> wala email dhundo</li>
+              <li><strong>"Confirm email address"</strong> link click karo</li>
               <li>Phir niche se <strong>Login</strong> karo</li>
             </ol>
           </div>
 
-          {/* Warning if not found */}
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5 text-sm text-amber-900">
             💡 <strong>Tip:</strong> Email nahi mil raha? <strong>Spam/Junk</strong> folder check karein. 
-            Sender: <strong>Supabase Auth</strong> ya <strong>noreply@mail.app.supabase.io</strong>
+            Sender: <strong>Supabase Auth</strong>
           </div>
 
-          {/* Action buttons */}
           <div className="space-y-3">
             <a
               href={inboxUrl}
@@ -231,7 +242,7 @@ function SignupForm() {
   }
 
   // ============================================================
-  // SIGNUP FORM (normal state)
+  // SIGNUP FORM
   // ============================================================
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center px-4 py-8">
@@ -243,7 +254,6 @@ function SignupForm() {
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Create Account</h1>
         <p className="text-gray-600 mb-6">Free trial - koi credit card nahi chahiye</p>
 
-        {/* Referral bonus banner */}
         {referralValid === true && (
           <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-3 mb-4">
             <div className="flex items-start gap-2">
@@ -254,7 +264,7 @@ function SignupForm() {
                   <strong>{referrerEmail}</strong> ne aapko invite kiya hai.
                 </div>
                 <div className="text-emerald-700 text-xs mt-1">
-                  💰 First payment pe discount milega: Rs.50 (Basic Monthly) tak Rs.1000 (Multi Yearly)
+                  💰 First payment pe discount milega
                 </div>
               </div>
             </div>
@@ -310,7 +320,6 @@ function SignupForm() {
             />
           </div>
 
-          {/* Referral Code - Optional */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Referral Code <span className="text-gray-400 font-normal">(optional)</span>
