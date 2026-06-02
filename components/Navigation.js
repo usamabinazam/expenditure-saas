@@ -24,7 +24,8 @@ export default function Navigation({ userEmail }) {
           <Link href="/dashboard" className="hover:underline">Dashboard</Link>
           <Link href="/new-statement" className="hover:underline">New Statement</Link>
           <Link href="/heads" className="hover:underline">Manage Heads</Link>
-          {/* NEW: Referrals link - highlighted to attract attention */}
+          {/* NEW: Previous Data link */}
+          <Link href="/previous-data" className="hover:underline">Previous Data</Link>
           <Link 
             href="/referrals" 
             className="bg-yellow-400 hover:bg-yellow-300 text-emerald-900 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap"
