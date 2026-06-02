@@ -8,25 +8,21 @@ import { createClient } from '@/lib/supabase/client';
 // ============================================================
 // VALIDATION HELPERS
 // ============================================================
-
-// Remove HTML tags + script injection attempts
 const sanitizeInput = (str) => {
   if (!str) return '';
   return str
-    .replace(/<[^>]*>/g, '')        // Remove HTML tags
-    .replace(/javascript:/gi, '')   // Remove javascript: protocol
-    .replace(/on\w+=/gi, '')        // Remove event handlers (onclick, onerror, etc.)
+    .replace(/<[^>]*>/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/on\w+=/gi, '')
     .trim();
 };
 
-// Field-specific validators - returns error string or null if valid
 const validators = {
   name: (value) => {
     const v = sanitizeInput(value);
     if (!v) return 'School name zaroori hai';
     if (v.length < 3) return 'School name kam se kam 3 characters ka hona chahiye';
     if (v.length > 200) return 'School name 200 characters se kam hona chahiye';
-    // Allow: letters, numbers, spaces, dots, dashes, slash, parentheses, comma, apostrophe
     if (!/^[a-zA-Z0-9\s.\-/(),']+$/.test(v)) {
       return 'School name mein sirf letters, numbers, spaces aur . - / ( ) , \' allowed hain';
     }
@@ -57,7 +53,7 @@ const validators = {
 
   emis_code: (value) => {
     const v = sanitizeInput(value);
-    if (!v) return null; // Optional field
+    if (!v) return null;
     if (v.length > 20) return 'EMIS Code 20 characters se kam hona chahiye';
     if (!/^[a-zA-Z0-9\s\-]+$/.test(v)) {
       return 'EMIS Code mein sirf letters, numbers allowed hain';
@@ -77,12 +73,24 @@ const validators = {
   },
 };
 
+// ============================================================
+// DESIGNATION OPTIONS - Extended list
+// Blank ("") option allowed for cases where no title needed
+// ============================================================
+const DESIGNATION_OPTIONS = [
+  { value: 'PRINCIPAL', label: 'PRINCIPAL' },
+  { value: 'HEADMASTER', label: 'HEADMASTER' },
+  { value: 'HEADMISTRESS', label: 'HEADMISTRESS' },
+  { value: 'SDEO', label: 'SDEO' },
+  { value: 'DEO', label: 'DEO' },
+  { value: 'Dy: DEO', label: 'Dy: DEO' },
+  { value: '', label: '(Blank - No Title)' },
+];
+
 export default function SetupClient({ userEmail, school, userId }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Per-field errors for real-time validation
   const [fieldErrors, setFieldErrors] = useState({});
 
   const [formData, setFormData] = useState({
@@ -91,17 +99,13 @@ export default function SetupClient({ userEmail, school, userId }) {
     ddo_code: school?.ddo_code || '',
     department: school?.department || 'EDUCATION',
     gender: school?.gender || 'Female',
-    principal_designation: school?.principal_designation || 'PRINCIPAL',
+    principal_designation: school?.principal_designation ?? 'PRINCIPAL',
     emis_code: school?.emis_code || '',
   });
 
-  // ============================================================
-  // Real-time field validation on change
-  // ============================================================
   const handleFieldChange = (field, value) => {
     setFormData({ ...formData, [field]: value });
 
-    // Validate this field
     if (validators[field]) {
       const errorMsg = validators[field](value);
       setFieldErrors(prev => ({
@@ -111,9 +115,6 @@ export default function SetupClient({ userEmail, school, userId }) {
     }
   };
 
-  // ============================================================
-  // Validate all fields before submit
-  // ============================================================
   const validateAll = () => {
     const errors = {};
     Object.keys(validators).forEach(field => {
@@ -128,7 +129,6 @@ export default function SetupClient({ userEmail, school, userId }) {
     e.preventDefault();
     setError('');
 
-    // Validation check
     if (!validateAll()) {
       setError('Form mein errors hain - ❌ wale fields theek karein');
       return;
@@ -137,14 +137,13 @@ export default function SetupClient({ userEmail, school, userId }) {
     setLoading(true);
     const supabase = createClient();
 
-    // Sanitize all string fields before sending to DB
     const sanitizedData = {
       name: sanitizeInput(formData.name),
       district: sanitizeInput(formData.district),
       ddo_code: sanitizeInput(formData.ddo_code),
       department: sanitizeInput(formData.department),
-      gender: formData.gender, // dropdown - safe
-      principal_designation: formData.principal_designation, // dropdown - safe
+      gender: formData.gender,
+      principal_designation: formData.principal_designation, // Can be empty string
       emis_code: sanitizeInput(formData.emis_code),
     };
 
@@ -175,7 +174,6 @@ export default function SetupClient({ userEmail, school, userId }) {
     router.refresh();
   };
 
-  // Helper: get input class based on error state
   const getInputClass = (field) => {
     const baseClass = "w-full px-3 py-2 border rounded focus:ring-2";
     if (fieldErrors[field]) {
@@ -290,7 +288,7 @@ export default function SetupClient({ userEmail, school, userId }) {
             )}
           </div>
 
-          {/* Gender + Designation (dropdowns - safe from XSS) */}
+          {/* Gender + Designation */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
@@ -306,7 +304,7 @@ export default function SetupClient({ userEmail, school, userId }) {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Principal Designation
+                Designation
               </label>
               <select
                 value={formData.principal_designation}
@@ -315,10 +313,15 @@ export default function SetupClient({ userEmail, school, userId }) {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="PRINCIPAL">PRINCIPAL</option>
-                <option value="HEADMASTER">HEADMASTER</option>
-                <option value="HEADMISTRESS">HEADMISTRESS</option>
+                {DESIGNATION_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Statement title mein use hogi (Blank = no title)
+              </p>
             </div>
           </div>
 
