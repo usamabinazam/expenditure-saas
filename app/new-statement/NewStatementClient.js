@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import { createClient } from '@/lib/supabase/client';
 import { calculateStatement, getPreviousStatement, MONTH_NAMES, SECTIONS, isNewFinancialYear } from '@/lib/utils';
@@ -12,7 +13,7 @@ export default function NewStatementClient({ userEmail, school, heads, statement
   const [showFYPopup, setShowFYPopup] = useState(false);
   const [fyAcknowledged, setFyAcknowledged] = useState(false);
 
-  // Smart defaults: next month after the latest one
+  // Smart defaults
   const today = new Date();
   let defaultMonth = today.getMonth() + 1;
   let defaultYear = today.getFullYear();
@@ -33,18 +34,18 @@ export default function NewStatementClient({ userEmail, school, heads, statement
   const [year, setYear] = useState(defaultYear);
   const [amounts, setAmounts] = useState({});
 
-  // ============================================================
+  // Check if any head has previous_expenditure set (to show info banner)
+  const hasManualPreviousData = heads.some(h => parseFloat(h.previous_expenditure) > 0);
+  
+  // Check if first statement of FY (no previous statements in current FY)
+  const previousStatementForCurrent = getPreviousStatement(statements, year, month);
+  const isFirstStatementOfFY = !previousStatementForCurrent && !isNewFinancialYear(month);
+  const willUseManualPrevious = isFirstStatementOfFY && hasManualPreviousData;
+
   // FY POPUP TRIGGER
-  // Show popup when:
-  // - Month is July (new FY start)
-  // - User has previous statements (matlab pichla FY tha)
-  // - User hasn't acknowledged yet for this month/year combo
-  // ============================================================
   useEffect(() => {
     if (isNewFinancialYear(month) && statements.length > 0 && !fyAcknowledged) {
-      // Check if there's any statement from previous FY (before this July)
       const hasPreviousFY = statements.some(s => {
-        // Previous FY = June ya pehle (same year ka), ya pichle saal ka
         return (s.year < year) || (s.year === year && s.month_num < 7);
       });
 
@@ -54,12 +55,10 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     }
   }, [month, year, statements, fyAcknowledged]);
 
-  // Reset acknowledgment when month/year changes
   useEffect(() => {
     setFyAcknowledged(false);
   }, [month, year]);
 
-  // Get heads by section helper
   const getHeadsBySection = (sectionId) => heads.filter((h) => h.section === sectionId);
 
   const handleFYConfirm = () => {
@@ -75,7 +74,6 @@ export default function NewStatementClient({ userEmail, school, heads, statement
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Safety check - if July aur user ne acknowledge nahi kiya
     if (isNewFinancialYear(month) && statements.length > 0 && !fyAcknowledged) {
       setShowFYPopup(true);
       return;
@@ -84,7 +82,9 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     setLoading(true);
 
     const previousStatement = getPreviousStatement(statements, year, month);
-    const calc = calculateStatement(amounts, previousStatement, heads);
+    
+    // Pass currentMonth so calculateStatement can use manual previous_expenditure
+    const calc = calculateStatement(amounts, previousStatement, heads, month);
 
     const statementData = {
       school_id: school.id,
@@ -143,14 +143,12 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     </div>
   );
 
-  // Section icons + colors
   const sectionStyles = {
     pays: { icon: '💰', bg: 'bg-white' },
     allowances: { icon: '🎁', bg: 'bg-gray-50' },
     non_salary: { icon: '🛠️', bg: 'bg-white' },
   };
 
-  // Calculate previous and next FY for the popup message
   const fyPrev = year > 0 ? `${year - 1}-${String(year).slice(-2)}` : '';
   const fyNew = `${year}-${String(year + 1).slice(-2)}`;
 
@@ -158,9 +156,7 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     <div className="min-h-screen bg-gray-50">
       <Navigation userEmail={userEmail} />
 
-      {/* ============================================================
-          NEW FY POPUP MODAL
-          ============================================================ */}
+      {/* NEW FY POPUP */}
       {showFYPopup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
@@ -178,7 +174,7 @@ export default function NewStatementClient({ userEmail, school, heads, statement
                   <strong>July {year}</strong> = Pakistan Government ka <strong>naya Financial Year</strong>.
                 </p>
                 <p>
-                  Pichla year (FY {fyPrev}) khatam ho gaya hai. Naya year fresh start hoga.
+                  Pichla year (FY {fyPrev}) khatam ho gaya. Naya year fresh start hoga.
                 </p>
               </div>
             </div>
@@ -186,16 +182,11 @@ export default function NewStatementClient({ userEmail, school, heads, statement
             <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-4">
               <div className="font-bold text-emerald-900 mb-2">✅ Kya Hoga:</div>
               <ul className="text-sm text-emerald-800 space-y-1">
-                <li>• Pichle FY ka data <strong>save rahega</strong> (history mein dikhega)</li>
+                <li>• Pichle FY ka data <strong>save rahega</strong> (history mein)</li>
                 <li>• Naye statement mein <strong>Previous = 0</strong> hoga</li>
-                <li>• Naya budget set karne ke liye <strong>Manage Heads</strong> use karein</li>
-                <li>• Sab fresh - jaise pehla mahina ho</li>
+                <li>• Naya budget <strong>Manage Heads</strong> use karein</li>
+                <li>• Sab fresh - jaise pehla mahina</li>
               </ul>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-sm text-amber-900">
-              💡 <strong>Tip:</strong> Pehle <strong>Manage Heads</strong> jaake naya budget set kar lein, 
-              phir July ka statement banayein.
             </div>
 
             <div className="flex gap-2 flex-wrap">
@@ -232,10 +223,29 @@ export default function NewStatementClient({ userEmail, school, heads, statement
           Sirf <strong>"This Month"</strong> ka data fill karein. Previous, Total, Saving, Excess sab automatic.
         </p>
 
-        {/* FY indicator banner when July is selected */}
+        {/* New FY indicator */}
         {isNewFinancialYear(month) && fyAcknowledged && (
           <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-3 mb-4 text-sm text-emerald-900">
             🆕 <strong>New Financial Year {fyNew}:</strong> Previous = 0 (naya year - fresh start)
+          </div>
+        )}
+
+        {/* First statement of FY with manual previous data */}
+        {willUseManualPrevious && !isNewFinancialYear(month) && (
+          <div className="bg-blue-50 border border-blue-300 rounded-lg p-3 mb-4 text-sm text-blue-900">
+            📊 <strong>Pehla Statement is FY ka:</strong> Previous column mein wo data use hoga jo aapne 
+            <Link href="/previous-data" className="underline font-bold mx-1">Previous Data</Link> 
+            page pe set kiya hai.
+          </div>
+        )}
+
+        {/* First statement of FY but no manual data set */}
+        {isFirstStatementOfFY && !hasManualPreviousData && !isNewFinancialYear(month) && (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-3 mb-4 text-sm text-amber-900">
+            ⚠️ <strong>Note:</strong> Yeh aapka pehla statement is FY ka hai aur Previous data set nahi.  
+            Previous = 0 ho jayega. Agar pichle months ka kharcha hai to pehle 
+            <Link href="/previous-data" className="underline font-bold mx-1">Previous Data</Link> 
+            page pe set karein.
           </div>
         )}
 
@@ -271,7 +281,7 @@ export default function NewStatementClient({ userEmail, school, heads, statement
             </div>
           </div>
 
-          {/* Render all 3 sections dynamically */}
+          {/* Sections */}
           {SECTIONS.map((section, index) => {
             const sectionHeads = getHeadsBySection(section.id);
             if (sectionHeads.length === 0) return null;
