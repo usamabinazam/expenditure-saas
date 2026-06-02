@@ -2,7 +2,7 @@ import './globals.css';
 import WhatsAppFloat from '@/components/WhatsAppFloat';
 
 export const metadata = {
-  title: 'Expenditure Generator - KPK Schools',
+  title: 'Expenditure Generator - KPK Schools ',
   description: 'Monthly Reconciliation Statement Generator for KPK Government Schools',
 };
 
