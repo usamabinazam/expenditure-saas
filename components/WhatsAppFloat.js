@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 // ⚠️ Apna WhatsApp number yahan daalo (92 ke saath, bina + ke)
-const WHATSAPP_NUMBER = '923489443339';
+const WHATSAPP_NUMBER = '923117675777';
 
 // Pre-written message - user click karte hi auto-fill
 const DEFAULT_MESSAGE = 'Assalam o Alaikum! Mujhe EduDesk (Expenditure Generator) ke baare mein madad chahiye.';
