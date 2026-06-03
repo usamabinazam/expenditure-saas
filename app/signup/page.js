@@ -14,6 +14,7 @@ function SignupForm() {
   const [signupEmail, setSignupEmail] = useState('');
   const [referralValid, setReferralValid] = useState(null);
   const [referrerEmail, setReferrerEmail] = useState('');
+  const [referrerId, setReferrerId] = useState(''); // Store referrer's ID for linking
   const [validatingCode, setValidatingCode] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -32,10 +33,16 @@ function SignupForm() {
     }
   }, [searchParams]);
 
+  // ============================================================
+  // VALIDATE REFERRAL CODE
+  // Uses RPC function lookup_referral_code(code_to_check)
+  // Returns: { referrer_id, referrer_email }
+  // ============================================================
   const validateReferralCode = async (code) => {
     if (!code || code.length < 4) {
       setReferralValid(null);
       setReferrerEmail('');
+      setReferrerId('');
       return;
     }
 
@@ -50,11 +57,16 @@ function SignupForm() {
     if (lookupError || !data || data.length === 0) {
       setReferralValid(false);
       setReferrerEmail('');
+      setReferrerId('');
     } else {
       setReferralValid(true);
-      const email = data[0].email;
-      const masked = email.replace(/^(.).*(@.*)$/, '$1***$2');
+      // FIXED: RPC returns referrer_email and referrer_id (not 'email' or 'id')
+      const refEmail = data[0].referrer_email;
+      const refId = data[0].referrer_id;
+      
+      const masked = refEmail.replace(/^(.).*(@.*)$/, '$1***$2');
       setReferrerEmail(masked);
+      setReferrerId(refId);
     }
   };
 
@@ -67,6 +79,7 @@ function SignupForm() {
     } else {
       setReferralValid(null);
       setReferrerEmail('');
+      setReferrerId('');
     }
   };
 
@@ -74,7 +87,6 @@ function SignupForm() {
     e.preventDefault();
     setError('');
 
-    // Validations
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords match nahi karte');
       return;
@@ -102,13 +114,10 @@ function SignupForm() {
       },
     });
 
-    // ============================================================
-    // ERROR HANDLING - Smart
-    // ============================================================
+    // ERROR HANDLING
     if (signUpError) {
       const msg = signUpError.message.toLowerCase();
 
-      // "User already registered" - show popup anyway (email might have been sent)
       if (msg.includes('already registered') || msg.includes('already exists')) {
         setSignupEmail(formData.email);
         setSignupComplete(true);
@@ -116,7 +125,6 @@ function SignupForm() {
         return;
       }
 
-      // "Email rate limit" - email STILL gets sent, show popup
       if (msg.includes('rate limit') || msg.includes('email rate')) {
         setSignupEmail(formData.email);
         setSignupComplete(true);
@@ -124,44 +132,33 @@ function SignupForm() {
         return;
       }
 
-      // Real error - show error message
       setError(signUpError.message);
       setLoading(false);
       return;
     }
 
-    // STEP 2: Link referral (if applicable) - don't block popup if this fails
-    if (signUpData?.user && formData.referralCode && referralValid === true) {
+    // STEP 2: Link referral if valid (use referrerId we already have from RPC)
+    if (signUpData?.user && formData.referralCode && referralValid === true && referrerId) {
       try {
-        const { data: referrer } = await supabase
+        // Update referee's profile with referred_by
+        await supabase
           .from('profiles')
-          .select('id')
-          .eq('referral_code', formData.referralCode)
-          .single();
+          .update({ referred_by: referrerId })
+          .eq('id', signUpData.user.id);
 
-        if (referrer) {
-          await supabase
-            .from('profiles')
-            .update({ referred_by: referrer.id })
-            .eq('id', signUpData.user.id);
-
-          await supabase.from('referrals').insert({
-            referrer_id: referrer.id,
-            referee_id: signUpData.user.id,
-            referral_code: formData.referralCode,
-            status: 'pending',
-          });
-        }
+        // Create referrals record
+        await supabase.from('referrals').insert({
+          referrer_id: referrerId,
+          referee_id: signUpData.user.id,
+          referral_code: formData.referralCode,
+          status: 'pending',
+        });
       } catch (err) {
         console.error('Referral linking failed:', err);
-        // Don't block popup
       }
     }
 
-    // ============================================================
-    // STEP 3: GUARANTEED POPUP - No conditions, just show it
-    // Agar Supabase error nahi diya, to email send ho gayi hai
-    // ============================================================
+    // GUARANTEED POPUP
     setSignupEmail(formData.email);
     setSignupComplete(true);
     setLoading(false);
