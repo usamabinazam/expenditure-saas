@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
+import PDFUploader from '@/components/PDFUploader';
 import { createClient } from '@/lib/supabase/client';
 import { calculateStatement, getPreviousStatement, MONTH_NAMES, SECTIONS, isNewFinancialYear } from '@/lib/utils';
 
@@ -33,11 +34,11 @@ export default function NewStatementClient({ userEmail, school, heads, statement
   const [month, setMonth] = useState(defaultMonth);
   const [year, setYear] = useState(defaultYear);
   const [amounts, setAmounts] = useState({});
+  const [pdfFilledAmounts, setPdfFilledAmounts] = useState({}); // Track which fields came from PDF
 
-  // Check if any head has previous_expenditure set (to show info banner)
+  // Check if any head has previous_expenditure set
   const hasManualPreviousData = heads.some(h => parseFloat(h.previous_expenditure) > 0);
   
-  // Check if first statement of FY (no previous statements in current FY)
   const previousStatementForCurrent = getPreviousStatement(statements, year, month);
   const isFirstStatementOfFY = !previousStatementForCurrent && !isNewFinancialYear(month);
   const willUseManualPrevious = isFirstStatementOfFY && hasManualPreviousData;
@@ -71,6 +72,24 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     router.push('/dashboard');
   };
 
+  // ============================================================
+  // PDF UPLOADER CALLBACK
+  // Yeh function PDF parse hone ke baad amounts fill karega
+  // ============================================================
+  const handlePDFAmounts = (extractedAmounts) => {
+    // Merge with existing amounts (PDF overrides empty fields)
+    setAmounts(prev => ({
+      ...prev,
+      ...extractedAmounts,
+    }));
+    
+    // Track which fields came from PDF for highlighting
+    setPdfFilledAmounts(extractedAmounts);
+    
+    // Scroll to top of form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -82,8 +101,6 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     setLoading(true);
 
     const previousStatement = getPreviousStatement(statements, year, month);
-    
-    // Pass currentMonth so calculateStatement can use manual previous_expenditure
     const calc = calculateStatement(amounts, previousStatement, heads, month);
 
     const statementData = {
@@ -98,7 +115,6 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     };
 
     const supabase = createClient();
-
     const existing = statements.find((s) => s.year === year && s.month_num === month);
 
     let result;
@@ -126,22 +142,46 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     router.push(`/statement/${result.data.id}`);
   };
 
-  const renderInputRow = (head) => (
-    <div key={head.id} className="grid grid-cols-12 gap-3 items-center">
-      <div className="col-span-2 font-mono text-sm text-gray-600">{head.code}</div>
-      <div className="col-span-7 text-sm">{head.name}</div>
-      <div className="col-span-3">
-        <input
-          type="number"
-          step="0.01"
-          placeholder="0"
-          value={amounts[head.code] || ''}
-          onChange={(e) => setAmounts({ ...amounts, [head.code]: e.target.value })}
-          className="w-full px-3 py-2 border border-gray-300 rounded text-right"
-        />
+  const renderInputRow = (head) => {
+    const isPdfFilled = pdfFilledAmounts[head.code] !== undefined;
+    
+    return (
+      <div key={head.id} className="grid grid-cols-12 gap-3 items-center">
+        <div className="col-span-2 font-mono text-sm text-gray-600">{head.code}</div>
+        <div className="col-span-7 text-sm">{head.name}</div>
+        <div className="col-span-3 relative">
+          <input
+            type="number"
+            step="0.01"
+            placeholder="0"
+            value={amounts[head.code] || ''}
+            onChange={(e) => {
+              setAmounts({ ...amounts, [head.code]: e.target.value });
+              // Remove PDF highlight when user edits
+              if (isPdfFilled) {
+                const newPdf = { ...pdfFilledAmounts };
+                delete newPdf[head.code];
+                setPdfFilledAmounts(newPdf);
+              }
+            }}
+            className={`w-full px-3 py-2 border rounded text-right ${
+              isPdfFilled 
+                ? 'border-emerald-400 bg-emerald-50' 
+                : 'border-gray-300'
+            }`}
+          />
+          {isPdfFilled && (
+            <span 
+              className="absolute -top-2 -right-2 bg-emerald-500 text-white text-xs px-1.5 py-0.5 rounded-full font-bold shadow-sm"
+              title="PDF se auto-filled"
+            >
+              ⚡
+            </span>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const sectionStyles = {
     pays: { icon: '💰', bg: 'bg-white' },
@@ -151,6 +191,8 @@ export default function NewStatementClient({ userEmail, school, heads, statement
 
   const fyPrev = year > 0 ? `${year - 1}-${String(year).slice(-2)}` : '';
   const fyNew = `${year}-${String(year + 1).slice(-2)}`;
+
+  const pdfFillCount = Object.keys(pdfFilledAmounts).length;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -222,6 +264,32 @@ export default function NewStatementClient({ userEmail, school, heads, statement
         <p className="text-gray-600 mb-6">
           Sirf <strong>"This Month"</strong> ka data fill karein. Previous, Total, Saving, Excess sab automatic.
         </p>
+
+        {/* ============================================================
+            PDF UPLOADER - NEW!
+            ============================================================ */}
+        <PDFUploader 
+          budgetHeads={heads} 
+          onAmountsExtracted={handlePDFAmounts}
+        />
+
+        {/* Success banner when PDF amounts loaded */}
+        {pdfFillCount > 0 && (
+          <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-4 mb-4">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">✨</span>
+              <div className="flex-1">
+                <div className="font-bold text-emerald-900">
+                  PDF se {pdfFillCount} values auto-fill ho gayi!
+                </div>
+                <div className="text-sm text-emerald-800 mt-1">
+                  Verify karein - sab fields mein ⚡ icon dikha rahe hain PDF se aaye hain. 
+                  Galat hai to edit kar lein.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* New FY indicator */}
         {isNewFinancialYear(month) && fyAcknowledged && (
