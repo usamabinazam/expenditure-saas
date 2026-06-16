@@ -572,7 +572,6 @@ export default function ACBillsClient({ userEmail, school }) {
                   <div className="sig-field">Signature <span className="line"></span></div>
                   <div className="sig-field">Date <span className="line"></span></div>
                 </div>
-                <div className="stamp">Official<br />Stamp</div>
               </div>
             </div>
 
