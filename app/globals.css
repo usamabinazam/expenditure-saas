@@ -58,3 +58,257 @@ body {
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
 }
+
+
+/* ===== A/C Bills Generator — append to globals.css ===== */
+
+/* Voucher container — common to all 4 docs */
+.acb-voucher {
+  background: #fff;
+  color: #000;
+  font-family: 'Times New Roman', Times, serif;
+  width: 210mm;
+  min-height: 297mm;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  margin: 0 auto 30px;
+  position: relative;
+}
+@media (max-width: 900px) {
+  .acb-voucher { width: 100%; }
+}
+
+/* ===== Doc 1: Claim Voucher ===== */
+.acb-doc-voucher { padding: 16mm 12mm; font-size: 11pt; }
+.acb-doc-voucher .acb-page-marker { position: absolute; top: 8mm; right: 12mm; font-size: 11pt; }
+.acb-doc-voucher .acb-v-title { text-align: center; font-size: 13pt; margin: 0 0 8px; font-weight: 400; }
+
+.acb-v-top-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+.acb-v-box-left { border: 1px solid #000; padding: 3px 8px; width: 160px; min-height: 36pt; font-size: 10pt; }
+.acb-v-box-right {
+  border: 1px solid #000; padding: 3px 8px; width: 230px; font-size: 10pt;
+  display: flex; flex-direction: column;
+}
+.acb-v-box-right .top { text-decoration: underline; text-align: right; }
+.acb-v-box-right .mid { flex: 1; min-height: 14pt; }
+.acb-v-box-right .bot { padding-top: 2px; }
+
+.acb-v-header-grid { margin-bottom: 6px; }
+.acb-v-header-grid .labels {
+  display: grid; grid-template-columns: 1.2fr 2.6fr 2fr 1fr 1.4fr;
+  gap: 6px; font-size: 10pt; padding: 0 2px 2px;
+}
+.acb-v-header-grid .values { display: grid; grid-template-columns: 1.2fr 2.6fr 2fr 1fr 1.4fr; gap: 6px; }
+.acb-v-header-grid .values > div {
+  border: 1px solid #000; padding: 6px 8px; font-weight: 700; font-size: 13pt;
+  min-height: 46px; display: flex; align-items: center; justify-content: center;
+  text-align: center; word-break: break-word;
+}
+
+.acb-v-payee-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;
+  margin: 8px 0 10px; font-size: 10pt;
+}
+.acb-v-payee-row .underline { border-bottom: 1px solid #000; min-height: 18pt; margin-top: 2px; }
+.acb-v-payee-row .box { border: 1px solid #000; min-height: 20pt; margin-top: 2px; }
+
+.acb-v-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.acb-v-table td, .acb-v-table th {
+  border: 1px solid #000; padding: 3px 6px; vertical-align: middle; font-weight: 400;
+}
+.acb-v-table thead th { font-weight: 400; text-align: center; }
+.acb-v-table .col-sr { width: 54px; text-align: center; }
+.acb-v-table .col-amt { width: 80px; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+.acb-v-table .col-obj { width: 64px; }
+.acb-v-table .col-proj { width: 64px; }
+.acb-v-table .head-row td { padding: 6px; text-align: center; }
+.acb-v-table .head-code { font-weight: 700; text-decoration: underline; }
+.acb-v-table .head-desc { text-decoration: underline; font-weight: 700; }
+.acb-v-table .empty-row td { height: 18pt; }
+.acb-v-table .total-row td, .acb-v-table .gtotal-row td { text-align: center; font-weight: 700; }
+.acb-v-table .gtotal-row .col-amt { font-size: 11pt; }
+
+.acb-v-summary { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.acb-v-summary td, .acb-v-summary th {
+  border: 1px solid #000; padding: 5px 6px; text-align: center; font-weight: 400;
+}
+.acb-v-summary th { font-weight: 700; }
+.acb-v-summary td { font-variant-numeric: tabular-nums; }
+
+.acb-v-bottom { display: grid; grid-template-columns: 1fr 170px; font-size: 10pt; }
+.acb-v-deductions { border: 1px solid #000; border-right: none; }
+.acb-v-deductions table { width: 100%; border-collapse: collapse; }
+.acb-v-deductions td { padding: 3px 8px; border-bottom: 1px solid #000; }
+.acb-v-deductions tr:last-child td { border-bottom: none; }
+.acb-v-deductions .col-amt {
+  width: 80px; text-align: right; font-weight: 600;
+  border-left: 1px solid #000; font-variant-numeric: tabular-nums;
+}
+.acb-v-deductions .label-row td { font-weight: 600; border-bottom: 1px solid #000; }
+.acb-v-deductions .total td { font-weight: 700; }
+
+.acb-v-bank-box { border: 1px solid #000; font-size: 10pt; }
+.acb-v-bank-box .lbl { padding: 4px 8px; border-bottom: 1px solid #000; font-weight: 600; text-align: center; }
+.acb-v-bank-box .item { padding: 5px 8px; border-bottom: 1px solid #000; min-height: 22pt; }
+.acb-v-bank-box .item:last-child { border-bottom: none; }
+.acb-v-bank-box .item.selected { font-weight: 700; background: #f4f4f4; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.acb-v-bank-box .item.selected::before { content: "✓ "; color: #000; }
+
+.acb-v-net-row { display: flex; align-items: stretch; border: 1px solid #000; border-top: none; }
+.acb-v-net-row .label { flex: 1; padding: 5px 8px; text-align: right; font-size: 10pt; }
+.acb-v-net-row .amt {
+  width: 80px; padding: 5px 8px; text-align: right; font-weight: 700;
+  border-left: 1px solid #000; font-size: 11pt; font-variant-numeric: tabular-nums;
+}
+.acb-v-net-row .balance-label { width: 80px; padding: 5px 8px; text-align: left; font-size: 10pt; border-left: 1px solid #000; }
+
+.acb-v-appropriation { text-align: right; font-size: 10pt; padding: 4px 0 0; }
+.acb-v-appropriation .line { display: inline-block; width: 120px; border-bottom: 1px solid #000; margin-left: 6px; }
+
+.acb-v-footer { margin-top: 22px; font-size: 10pt; }
+.acb-v-footer .sig-row {
+  display: grid; grid-template-columns: 1.2fr 1.4fr 1fr;
+  gap: 30px; margin-bottom: 18px; align-items: end;
+}
+.acb-v-footer .sig-field { display: flex; gap: 6px; align-items: end; }
+.acb-v-footer .sig-field .line { flex: 1; border-bottom: 1px solid #000; min-height: 14pt; }
+.acb-v-footer .stamp { text-align: center; margin-top: 20px; line-height: 1.4; }
+
+/* ===== Doc 2: Coded Proforma ===== */
+.acb-doc-coded { padding: 20mm 18mm; font-size: 12pt; }
+.acb-doc-coded .acb-cp-title { text-align: center; font-size: 18pt; font-weight: 700; margin: 0 0 4px; }
+.acb-doc-coded .acb-cp-subtitle {
+  text-align: center; font-style: italic; font-weight: 700;
+  text-decoration: underline; font-size: 12pt; margin: 0 0 28px;
+}
+.acb-doc-coded .acb-cp-subhead { margin: 0 0 22px; font-size: 12pt; padding-left: 36px; }
+.acb-doc-coded .acb-cp-subhead .lbl { margin-right: 60px; }
+.acb-doc-coded .acb-cp-subhead .val { text-decoration: underline; font-weight: 700; }
+
+.acb-cp-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1px; font-size: 11pt; }
+.acb-cp-row .acb-cp-num { width: 24px; text-align: right; }
+.acb-cp-row .acb-cp-label { flex: 0 0 200px; font-weight: 400; }
+.acb-cp-cells { display: flex; }
+.acb-cp-cell {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 28px; border: 1px solid #000; border-right: none;
+  font-size: 11pt; font-weight: 700; text-align: center;
+}
+.acb-cp-cell:last-child { border-right: 1px solid #000; }
+
+.acb-cp-payment {
+  display: flex; font-weight: 400; margin: 18px 0 8px;
+  padding-left: 36px; font-size: 11pt; gap: 60px;
+}
+.acb-cp-payment > div:first-child { width: 200px; }
+
+.acb-cp-table { width: 100%; border-collapse: collapse; font-size: 11pt; }
+.acb-cp-table th, .acb-cp-table td {
+  border: 1px solid #000; padding: 5px 8px; text-align: center;
+  font-weight: 400; height: 22pt;
+}
+.acb-cp-table th { font-weight: 700; }
+.acb-cp-table .col-obj { width: 25%; }
+.acb-cp-table .col-amt { width: 18%; font-weight: 700; font-variant-numeric: tabular-nums; }
+.acb-cp-table .col-head { width: 32%; }
+
+.acb-cp-totals {
+  margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr;
+  gap: 30px 80px; font-size: 11pt;
+}
+.acb-cp-totals .lbl { display: inline-block; width: 140px; }
+.acb-cp-totals .val {
+  display: inline-block; border-bottom: 1px solid #000;
+  padding: 0 6px; min-width: 120px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+.acb-cp-signature { margin-top: 40px; display: flex; justify-content: flex-end; }
+.acb-cp-signature .sig { text-align: center; font-size: 11pt; }
+.acb-cp-signature .sig .line {
+  border-top: 1px solid #000; padding-top: 2px; min-width: 200px; font-weight: 700;
+}
+
+/* ===== Doc 3: Budget Availability ===== */
+.acb-doc-bap { padding: 20mm 22mm; font-size: 13pt; }
+.acb-doc-bap .acb-page-marker { position: absolute; top: 8mm; right: 12mm; font-size: 11pt; }
+.acb-doc-bap .acb-bap-title { text-align: center; font-weight: 700; font-size: 14pt; text-decoration: underline; margin: 0 0 14px; }
+.acb-doc-bap .acb-bap-ddo {
+  text-align: center; font-size: 16pt; margin: 0 0 30px;
+  display: flex; justify-content: center; gap: 50px; align-items: baseline;
+}
+.acb-doc-bap .acb-bap-ddo .val { text-decoration: underline; font-weight: 700; font-style: italic; }
+
+.acb-bap-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  margin-bottom: 22px; font-size: 12pt;
+}
+.acb-bap-row .item { display: flex; align-items: baseline; gap: 8px; }
+.acb-bap-row .item .lbl { white-space: nowrap; }
+.acb-bap-row .item .val {
+  text-decoration: underline; font-weight: 700; font-style: italic;
+  font-variant-numeric: tabular-nums;
+}
+
+.acb-bap-box { border: 1px solid #000; padding: 18px 22px; margin-top: 14px; font-size: 12pt; }
+.acb-bap-box .rupees { text-align: right; margin-bottom: 14px; }
+.acb-bap-line {
+  display: flex; justify-content: space-between;
+  align-items: baseline; margin-bottom: 18px;
+}
+.acb-bap-line:last-child { margin-bottom: 0; }
+.acb-bap-line .val {
+  text-decoration: underline; font-weight: 700;
+  font-variant-numeric: tabular-nums; min-width: 120px; text-align: right;
+}
+
+.acb-bap-signatures { margin-top: 50px; font-size: 12pt; }
+.acb-bap-signatures .sig-line {
+  display: flex; align-items: baseline; gap: 0; margin-bottom: 30px;
+}
+.acb-bap-signatures .sig-line .lbl { white-space: nowrap; margin-right: 4px; }
+.acb-bap-signatures .sig-line .line {
+  flex: 1; border-bottom: 1px solid #000; margin: 0 12px; min-height: 14pt;
+}
+
+/* ===== Doc 4: Sanction Order ===== */
+.acb-doc-sanction { padding: 18mm 18mm; font-size: 12pt; line-height: 1.6; }
+.acb-doc-sanction .acb-s-header {
+  text-align: center; font-weight: 700; text-decoration: underline;
+  margin: 0 0 18px; font-size: 12pt;
+}
+.acb-doc-sanction .acb-s-header .line2 { display: block; }
+.acb-doc-sanction .acb-s-label { font-weight: 700; text-decoration: underline; margin-bottom: 6px; }
+.acb-doc-sanction .acb-s-para {
+  text-indent: 32px; font-style: italic; text-align: justify; margin: 0 0 12px;
+}
+.acb-doc-sanction .acb-s-para b { font-weight: 700; font-style: italic; }
+.acb-doc-sanction .acb-s-sig {
+  text-align: right; font-weight: 700; margin-top: 32px; line-height: 1.4;
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+.acb-doc-sanction .acb-s-endst { margin-top: 34px; font-size: 12pt; }
+.acb-doc-sanction .acb-s-endst .blank {
+  display: inline-block; border-bottom: 1px solid #000;
+  width: 120px; height: 14pt; vertical-align: bottom; margin: 0 4px;
+}
+.acb-doc-sanction .acb-s-copy-label {
+  margin-top: 12px; font-weight: 700; font-style: italic; text-decoration: underline;
+}
+.acb-doc-sanction .acb-s-copy-list { margin: 6px 0 0; padding-left: 36px; }
+.acb-doc-sanction .acb-s-copy-list li { margin-bottom: 4px; }
+
+/* ===== A/C Bills — Print rules ===== */
+@media print {
+  /* Hide nav, form panel, top bar, doc tabs when printing A/C Bills */
+  .acb-no-print { display: none !important; }
+
+  body { background: #fff; }
+
+  .acb-voucher {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0;
+    box-shadow: none;
+    page-break-after: always;
+  }
+  .acb-voucher:last-child { page-break-after: auto; }
+}
