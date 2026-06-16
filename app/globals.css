@@ -298,15 +298,17 @@ body {
 
 /* ===== A/C Bills — Print rules ===== */
 @media print {
+  @page { size: A4; margin: 0; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
   /* Hide nav, form panel, top bar, doc tabs when printing A/C Bills */
   .acb-no-print { display: none !important; }
 
-  body { background: #fff; }
-
   .acb-voucher {
-    width: 210mm;
-    min-height: 297mm;
-    margin: 0;
+    width: 200mm;
+    min-height: 287mm;
+    margin: 0 auto;
     box-shadow: none;
     page-break-after: always;
   }
