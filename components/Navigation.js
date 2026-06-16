@@ -33,6 +33,7 @@ export default function Navigation({ userEmail }) {
             🎁 Earn 2 Months Free
           </Link>
           <Link href="/setup" className="hover:underline">Profile</Link>
+            <Link href="/ac-bills"className="hover:underline">AC Bills</Link>
           <span className="text-emerald-200 text-xs">{userEmail}</span>
           <button
             onClick={handleLogout}
