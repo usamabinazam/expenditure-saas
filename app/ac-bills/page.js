@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getSubscriptionInfo } from '@/lib/subscription';
 import ACBillsClient from './ACBillsClient';
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'; 
 
 export default async function ACBillsPage() {
   const supabase = await createClient();
