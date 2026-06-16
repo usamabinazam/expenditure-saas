@@ -305,6 +305,14 @@ body {
   /* Hide nav, form panel, top bar, doc tabs when printing A/C Bills */
   .acb-no-print { display: none !important; }
 
+  /* Hide the WhatsApp floating button and any other fixed-position widgets */
+  a[href*="wa.me"],
+  a[href*="whatsapp"],
+  [class*="WhatsApp"],
+  [class*="whatsapp"] {
+    display: none !important;
+  }
+
   .acb-voucher {
     width: 200mm;
     min-height: 287mm;
