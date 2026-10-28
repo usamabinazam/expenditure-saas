@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
-import { createClient } from '@/lib/supabase/client';
+import { saveSchool } from '@/lib/store';
 
 // ============================================================
 // VALIDATION HELPERS
@@ -87,7 +87,7 @@ const DESIGNATION_OPTIONS = [
   { value: '', label: '(Blank - No Title)' },
 ];
 
-export default function SetupClient({ userEmail, school, userId }) {
+export default function SetupClient({ school }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -135,7 +135,6 @@ export default function SetupClient({ userEmail, school, userId }) {
     }
 
     setLoading(true);
-    const supabase = createClient();
 
     const sanitizedData = {
       name: sanitizeInput(formData.name),
@@ -147,31 +146,14 @@ export default function SetupClient({ userEmail, school, userId }) {
       emis_code: sanitizeInput(formData.emis_code),
     };
 
-    if (school) {
-      const { error: updateError } = await supabase
-        .from('schools')
-        .update(sanitizedData)
-        .eq('id', school.id);
-
-      if (updateError) {
-        setError(updateError.message);
-        setLoading(false);
-        return;
-      }
-    } else {
-      const { error: insertError } = await supabase
-        .from('schools')
-        .insert({ ...sanitizedData, user_id: userId });
-
-      if (insertError) {
-        setError(insertError.message);
-        setLoading(false);
-        return;
-      }
+    if (!saveSchool(sanitizedData)) {
+      setLoading(false);
+      return;
     }
 
-    router.push('/dashboard');
-    router.refresh();
+    // ?next=/statement/... → statement pe wapas, warna home
+    const next = new URLSearchParams(window.location.search).get('next');
+    router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/');
   };
 
   const getInputClass = (field) => {
@@ -184,12 +166,12 @@ export default function SetupClient({ userEmail, school, userId }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userEmail={userEmail} />
+      <Navigation />
 
       <main className="max-w-2xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">🏫 School Profile</h1>
         <p className="text-gray-600 mb-6">
-          School ki details fill karein. Yeh PDF mein use hogi.
+          School ki details fill karein. Yeh printout ke header mein aayengi aur isi browser mein save rahengi (ek dafa bharna kaafi hai).
         </p>
 
         {error && (

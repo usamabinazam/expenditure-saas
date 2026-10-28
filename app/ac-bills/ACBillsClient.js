@@ -37,7 +37,7 @@ const fmtComma = (n) => Math.round(Number(n) || 0).toLocaleString('en-US');
 const fmtRsSuffix = (n) => fmtComma(n) + '/-';
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-export default function ACBillsClient({ userEmail, school }) {
+export default function ACBillsClient({ school }) {
   // ===== State =====
   const [office, setOffice] = useState({
     ddoCode: '',
@@ -73,7 +73,7 @@ export default function ACBillsClient({ userEmail, school }) {
 
   // ===== Effects =====
 
-  // Pre-fill office from school prop (Supabase row)
+  // Pre-fill office from saved School Profile
   useEffect(() => {
     if (!school) return;
     setOffice(prev => ({
@@ -204,7 +204,7 @@ export default function ACBillsClient({ userEmail, school }) {
   return (
     <>
       <div className="acb-no-print">
-        <Navigation userEmail={userEmail} />
+        <Navigation />
       </div>
 
       {/* Top bar */}

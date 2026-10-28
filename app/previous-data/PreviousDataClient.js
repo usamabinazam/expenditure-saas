@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
-import { createClient } from '@/lib/supabase/client';
+import { saveHeads } from '@/lib/store';
 import { SECTIONS, MONTH_NAMES, formatNumber } from '@/lib/utils';
 
-export default function PreviousDataClient({ userEmail, school, heads }) {
+export default function PreviousDataClient({ heads: initialHeads }) {
   const router = useRouter();
-  const supabase = createClient();
+  const [heads, setHeads] = useState(initialHeads);
 
   // Initialize edited values from existing previous_expenditure
   const initialValues = {};
@@ -52,31 +52,20 @@ export default function PreviousDataClient({ userEmail, school, heads }) {
       return;
     }
 
-    let errorCount = 0;
-    for (const change of changes) {
-      const { error } = await supabase
-        .from('budget_heads')
-        .update({ previous_expenditure: change.previous_expenditure })
-        .eq('id', change.id);
-
-      if (error) {
-        errorCount++;
-        console.error('Error:', change.id, error);
-      }
-    }
+    const updated = heads.map((h) => {
+      const change = changes.find((c) => c.id === h.id);
+      return change ? { ...h, previous_expenditure: change.previous_expenditure } : h;
+    });
 
     setIsSaving(false);
 
-    if (errorCount > 0) {
-      alert(`⚠️ ${errorCount} entries save nahi hui. Phir try karein.`);
-      return;
-    }
+    if (!saveHeads(updated)) return;
+    setHeads(updated);
 
     setHasChanges(false);
     setSaveSuccess(true);
-    
+
     setTimeout(() => setSaveSuccess(false), 4000);
-    router.refresh();
   };
 
   const handleResetAll = () => {
@@ -125,7 +114,7 @@ export default function PreviousDataClient({ userEmail, school, heads }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userEmail={userEmail} />
+      <Navigation />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* Header */}
@@ -296,7 +285,7 @@ export default function PreviousDataClient({ userEmail, school, heads }) {
         {/* Back to dashboard */}
         <div className="text-center mt-6">
           <Link
-            href="/dashboard"
+            href="/"
             className="text-emerald-700 hover:underline font-medium"
           >
             ← Dashboard Pe Jao

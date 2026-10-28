@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Navigation from '@/components/Navigation';
-import { createClient } from '@/lib/supabase/client';
+import { saveHeads, newId } from '@/lib/store';
 import { SECTIONS } from '@/lib/utils';
 
-export default function HeadsClient({ userEmail, school, heads: initialHeads }) {
+export default function HeadsClient({ heads: initialHeads }) {
   const router = useRouter();
   const [heads, setHeads] = useState(initialHeads);
   const [newHead, setNewHead] = useState({
@@ -25,7 +25,12 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
   const [draggedItem, setDraggedItem] = useState(null);
   const [dragOverItem, setDragOverItem] = useState(null);
 
-  const supabase = createClient();
+  // Browser storage mein save karo, phir screen update
+  const persist = (newHeads) => {
+    if (!saveHeads(newHeads)) return false;
+    setHeads(newHeads);
+    return true;
+  };
 
   // Helper function to get heads for any section
   const getHeadsBySection = (sectionId) => heads.filter((h) => h.section === sectionId);
@@ -44,25 +49,17 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
       ...heads.filter((h) => h.section === newHead.section).map((h) => h.display_order || 0)
     );
 
-    const { data, error } = await supabase
-      .from('budget_heads')
-      .insert({
-        school_id: school.id,
-        section: newHead.section,
-        code: newHead.code.trim(),
-        name: newHead.name.trim(),
-        display_order: maxOrder + 1,
-        budget: 0,
-      })
-      .select()
-      .single();
+    const head = {
+      id: newId(),
+      section: newHead.section,
+      code: newHead.code.trim().toUpperCase(),
+      name: newHead.name.trim(),
+      display_order: maxOrder + 1,
+      budget: 0,
+      previous_expenditure: 0,
+    };
 
-    if (error) {
-      alert('Error: ' + error.message);
-      return;
-    }
-
-    setHeads([...heads, data]);
+    if (!persist([...heads, head])) return;
     setNewHead({ section: 'pays', code: '', name: '' });
   };
 
@@ -104,31 +101,17 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
       return;
     }
 
-    let errorCount = 0;
-    for (const change of changes) {
-      const { error } = await supabase
-        .from('budget_heads')
-        .update({ budget: change.budget })
-        .eq('id', change.id);
-
-      if (error) {
-        errorCount++;
-        console.error('Error updating head:', change.id, error);
-      }
-    }
-
-    if (errorCount > 0) {
-      alert(`⚠️ ${errorCount} budgets save nahi ho saki. Phir se try karein.`);
-      setIsSaving(false);
-      return;
-    }
-
-    setHeads(
+    const saved = persist(
       heads.map((h) => {
         const change = changes.find((c) => c.id === h.id);
         return change ? { ...h, budget: change.budget } : h;
       })
     );
+
+    if (!saved) {
+      setIsSaving(false);
+      return;
+    }
 
     setIsEditMode(false);
     setHasUnsavedChanges(false);
@@ -151,14 +134,7 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
   const handleDelete = async (id) => {
     if (!confirm('Yeh head delete karein?')) return;
 
-    const { error } = await supabase.from('budget_heads').delete().eq('id', id);
-
-    if (error) {
-      alert('Error: ' + error.message);
-      return;
-    }
-
-    setHeads(heads.filter((h) => h.id !== id));
+    persist(heads.filter((h) => h.id !== id));
   };
 
   // DRAG AND DROP
@@ -222,14 +198,7 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
       const update = updates.find((u) => u.id === h.id);
       return update ? { ...h, display_order: update.newOrder } : h;
     });
-    setHeads(newHeads);
-
-    for (const update of updates) {
-      await supabase
-        .from('budget_heads')
-        .update({ display_order: update.newOrder })
-        .eq('id', update.id);
-    }
+    persist(newHeads);
   };
 
   // RENDER TABLE
@@ -319,7 +288,7 @@ export default function HeadsClient({ userEmail, school, heads: initialHeads }) 
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userEmail={userEmail} />
+      <Navigation />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-2">

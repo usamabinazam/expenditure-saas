@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import { formatNumber } from '@/lib/utils';
 
-export default function ViewStatementClient({ userEmail, school, statement }) {
+export default function ViewStatementClient({ school, statement }) {
   const router = useRouter();
 
   const data = statement.data;
@@ -155,9 +155,18 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userEmail={userEmail} />
+      <Navigation />
 
       <main className="max-w-6xl mx-auto px-4 py-6">
+        {!school.name && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-3 mb-4 text-sm text-amber-900">
+            ⚠️ School Profile set nahi, is liye printout ke header mein school ka naam / DDO code khaali hai.{' '}
+            <Link href={`/setup?next=/statement/${statement.id}`} className="underline font-bold">
+              School Profile bharein
+            </Link>
+          </div>
+        )}
+
         {/* HEADER - title + 2 print buttons + back */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
           <div>
@@ -180,7 +189,7 @@ export default function ViewStatementClient({ userEmail, school, statement }) {
               📑 Print - Multi-Page
             </button>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/')}
               className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded"
             >
               ← Back

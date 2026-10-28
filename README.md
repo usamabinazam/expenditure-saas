@@ -1,7 +1,10 @@
 # 📊 Expenditure Statement Generator - SaaS
 
 **KPK Government Schools** ke liye Monthly Reconciliation Statement generator.
-Full SaaS - online, multi-user, ready to scale.
+
+> **Open access:** koi login, signup ya fee nahi. Site kholte hi Dashboard aata hai.
+> Data user ke browser (localStorage) mein save hota hai — `lib/store.js`.
+> Neeche ka purana Supabase/auth wala hissa ab lagu nahi. Deploy ke liye `DEPLOY.md` dekhein.
 
 ## 🌟 Features
 

@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import PDFUploader from '@/components/PDFUploader';
-import { createClient } from '@/lib/supabase/client';
+import { saveStatement } from '@/lib/store';
 import { calculateStatement, getPreviousStatement, MONTH_NAMES, SECTIONS, isNewFinancialYear } from '@/lib/utils';
 
-export default function NewStatementClient({ userEmail, school, heads, statements }) {
+export default function NewStatementClient({ school, heads, statements }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showFYPopup, setShowFYPopup] = useState(false);
@@ -69,7 +69,6 @@ export default function NewStatementClient({ userEmail, school, heads, statement
 
   const handleFYCancel = () => {
     setShowFYPopup(false);
-    router.push('/dashboard');
   };
 
   // ============================================================
@@ -103,8 +102,7 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     const previousStatement = getPreviousStatement(statements, year, month);
     const calc = calculateStatement(amounts, previousStatement, heads, month);
 
-    const statementData = {
-      school_id: school.id,
+    const saved = saveStatement({
       year,
       month_num: month,
       month_name: MONTH_NAMES[month],
@@ -112,34 +110,16 @@ export default function NewStatementClient({ userEmail, school, heads, statement
         month_year: `${MONTH_NAMES[month].toUpperCase()} ${year}`,
         ...calc,
       },
-    };
+    });
 
-    const supabase = createClient();
-    const existing = statements.find((s) => s.year === year && s.month_num === month);
-
-    let result;
-    if (existing) {
-      result = await supabase
-        .from('statements')
-        .update({ data: statementData.data })
-        .eq('id', existing.id)
-        .select()
-        .single();
-    } else {
-      result = await supabase
-        .from('statements')
-        .insert(statementData)
-        .select()
-        .single();
-    }
-
-    if (result.error) {
-      alert('Error: ' + result.error.message);
+    if (!saved) {
       setLoading(false);
       return;
     }
 
-    router.push(`/statement/${result.data.id}`);
+    // School details nahi hain to pehle profile (printout header ke liye), phir statement
+    const statementUrl = `/statement/${saved.id}`;
+    router.push(school ? statementUrl : `/setup?next=${encodeURIComponent(statementUrl)}`);
   };
 
   const renderInputRow = (head) => {
@@ -196,7 +176,7 @@ export default function NewStatementClient({ userEmail, school, heads, statement
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userEmail={userEmail} />
+      <Navigation />
 
       {/* NEW FY POPUP */}
       {showFYPopup && (
