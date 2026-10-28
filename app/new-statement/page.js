@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { getSubscriptionInfo } from '@/lib/subscription';
 import NewStatementClient from './NewStatementClient';
 
 export const dynamic = 'force-dynamic';
@@ -9,20 +8,6 @@ export default async function NewStatementPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
-
-  // SUBSCRIPTION CHECK - Block expired users
-  const { data: subscription } = await supabase
-    .from('subscriptions')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
-
-  const subInfo = getSubscriptionInfo(subscription);
-
-  // Only block if subscription is truly expired
-  if (subInfo.isExpired) {
-    redirect('/pricing?expired=true');
-  }
 
   // School check
   const { data: school } = await supabase

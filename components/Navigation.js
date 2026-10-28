@@ -26,12 +26,6 @@ export default function Navigation({ userEmail }) {
           <Link href="/heads" className="hover:underline">Manage Heads</Link>
           {/* NEW: Previous Data link */}
           <Link href="/previous-data" className="hover:underline">Previous Data</Link>
-          <Link 
-            href="/referrals" 
-            className="bg-yellow-400 hover:bg-yellow-300 text-emerald-900 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap"
-          >
-            🎁 Earn 2 Months Free
-          </Link>
           <Link href="/setup" className="hover:underline">Profile</Link>
             <Link href="/ac-bills"className="hover:underline">AC Bills</Link>
           <span className="text-emerald-200 text-xs">{userEmail}</span>

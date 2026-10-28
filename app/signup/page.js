@@ -1,87 +1,22 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
 function SignupForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [signupComplete, setSignupComplete] = useState(false);
   const [signupEmail, setSignupEmail] = useState('');
-  const [referralValid, setReferralValid] = useState(null);
-  const [referrerEmail, setReferrerEmail] = useState('');
-  const [referrerId, setReferrerId] = useState(''); // Store referrer's ID for linking
-  const [validatingCode, setValidatingCode] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     confirmPassword: '',
-    referralCode: '',
   });
-
-  useEffect(() => {
-    const refFromUrl = searchParams.get('ref');
-    if (refFromUrl) {
-      const code = refFromUrl.toUpperCase().trim();
-      setFormData(prev => ({ ...prev, referralCode: code }));
-      validateReferralCode(code);
-    }
-  }, [searchParams]);
-
-  // ============================================================
-  // VALIDATE REFERRAL CODE
-  // Uses RPC function lookup_referral_code(code_to_check)
-  // Returns: { referrer_id, referrer_email }
-  // ============================================================
-  const validateReferralCode = async (code) => {
-    if (!code || code.length < 4) {
-      setReferralValid(null);
-      setReferrerEmail('');
-      setReferrerId('');
-      return;
-    }
-
-    setValidatingCode(true);
-    const supabase = createClient();
-
-    const { data, error: lookupError } = await supabase
-      .rpc('lookup_referral_code', { code_to_check: code.toUpperCase().trim() });
-
-    setValidatingCode(false);
-
-    if (lookupError || !data || data.length === 0) {
-      setReferralValid(false);
-      setReferrerEmail('');
-      setReferrerId('');
-    } else {
-      setReferralValid(true);
-      // FIXED: RPC returns referrer_email and referrer_id (not 'email' or 'id')
-      const refEmail = data[0].referrer_email;
-      const refId = data[0].referrer_id;
-      
-      const masked = refEmail.replace(/^(.).*(@.*)$/, '$1***$2');
-      setReferrerEmail(masked);
-      setReferrerId(refId);
-    }
-  };
-
-  const handleReferralChange = (e) => {
-    const code = e.target.value.toUpperCase().trim();
-    setFormData({ ...formData, referralCode: code });
-
-    if (code.length >= 4) {
-      validateReferralCode(code);
-    } else {
-      setReferralValid(null);
-      setReferrerEmail('');
-      setReferrerId('');
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -97,16 +32,11 @@ function SignupForm() {
       return;
     }
 
-    if (formData.referralCode && referralValid === false) {
-      setError('Referral code galat hai. Sahi code daalein ya khali chhodein.');
-      return;
-    }
-
     setLoading(true);
     const supabase = createClient();
 
-    // STEP 1: Create auth account
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    // Create auth account
+    const { error: signUpError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
       options: {
@@ -135,27 +65,6 @@ function SignupForm() {
       setError(signUpError.message);
       setLoading(false);
       return;
-    }
-
-    // STEP 2: Link referral if valid (use referrerId we already have from RPC)
-    if (signUpData?.user && formData.referralCode && referralValid === true && referrerId) {
-      try {
-        // Update referee's profile with referred_by
-        await supabase
-          .from('profiles')
-          .update({ referred_by: referrerId })
-          .eq('id', signUpData.user.id);
-
-        // Create referrals record
-        await supabase.from('referrals').insert({
-          referrer_id: referrerId,
-          referee_id: signUpData.user.id,
-          referral_code: formData.referralCode,
-          status: 'pending',
-        });
-      } catch (err) {
-        console.error('Referral linking failed:', err);
-      }
     }
 
     // GUARANTEED POPUP
@@ -249,24 +158,7 @@ function SignupForm() {
         </Link>
 
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Create Account</h1>
-        <p className="text-gray-600 mb-6">Free trial - koi credit card nahi chahiye</p>
-
-        {referralValid === true && (
-          <div className="bg-emerald-50 border-2 border-emerald-300 rounded-lg p-3 mb-4">
-            <div className="flex items-start gap-2">
-              <span className="text-xl">🎁</span>
-              <div className="text-sm">
-                <div className="font-bold text-emerald-900">Referral Active!</div>
-                <div className="text-emerald-800 text-xs mt-1">
-                  <strong>{referrerEmail}</strong> ne aapko invite kiya hai.
-                </div>
-                <div className="text-emerald-700 text-xs mt-1">
-                  💰 First payment pe discount milega
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        <p className="text-gray-600 mb-6">Bilkul free - koi fee nahi</p>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded mb-4 text-sm">
@@ -315,51 +207,6 @@ function SignupForm() {
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-emerald-500"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Referral Code <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={formData.referralCode}
-                onChange={handleReferralChange}
-                className={`w-full px-3 py-2 border rounded focus:ring-2 uppercase font-mono ${
-                  referralValid === true
-                    ? 'border-emerald-500 focus:ring-emerald-500 bg-emerald-50'
-                    : referralValid === false
-                    ? 'border-red-300 focus:ring-red-500 bg-red-50'
-                    : 'border-gray-300 focus:ring-emerald-500'
-                }`}
-                placeholder="USA456"
-                maxLength={20}
-              />
-              {validatingCode && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                  Checking...
-                </div>
-              )}
-              {!validatingCode && referralValid === true && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold">
-                  ✓
-                </div>
-              )}
-              {!validatingCode && referralValid === false && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 font-bold">
-                  ✗
-                </div>
-              )}
-            </div>
-            {referralValid === false && (
-              <p className="text-xs text-red-600 mt-1">Yeh code valid nahi hai</p>
-            )}
-            {referralValid === null && formData.referralCode.length === 0 && (
-              <p className="text-xs text-gray-500 mt-1">
-                Kisi friend ne invite kiya? Code daalein discount ke liye
-              </p>
-            )}
           </div>
 
           <button

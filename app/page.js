@@ -30,7 +30,7 @@ export default function Home() {
             href="/signup" 
             className="inline-block px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white text-lg font-semibold rounded-lg shadow-lg"
           >
-            Free Trial Start Karein →
+            Free Account Banayein →
           </Link>
         </div>
 
