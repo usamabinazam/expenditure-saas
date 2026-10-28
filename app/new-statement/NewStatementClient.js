@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import PDFUploader from '@/components/PDFUploader';
-import { createClient } from '@/lib/supabase/client';
+import { saveStatement } from './actions';
 import { calculateStatement, getPreviousStatement, MONTH_NAMES, SECTIONS, isNewFinancialYear } from '@/lib/utils';
 
 export default function NewStatementClient({ userEmail, school, heads, statements }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [showFYPopup, setShowFYPopup] = useState(false);
   const [fyAcknowledged, setFyAcknowledged] = useState(false);
 
@@ -99,47 +100,33 @@ export default function NewStatementClient({ userEmail, school, heads, statement
     }
 
     setLoading(true);
+    setSaveError('');
 
     const previousStatement = getPreviousStatement(statements, year, month);
     const calc = calculateStatement(amounts, previousStatement, heads, month);
 
-    const statementData = {
-      school_id: school.id,
-      year,
-      month_num: month,
-      month_name: MONTH_NAMES[month],
-      data: {
-        month_year: `${MONTH_NAMES[month].toUpperCase()} ${year}`,
-        ...calc,
-      },
-    };
-
-    const supabase = createClient();
-    const existing = statements.find((s) => s.year === year && s.month_num === month);
-
     let result;
-    if (existing) {
-      result = await supabase
-        .from('statements')
-        .update({ data: statementData.data })
-        .eq('id', existing.id)
-        .select()
-        .single();
-    } else {
-      result = await supabase
-        .from('statements')
-        .insert(statementData)
-        .select()
-        .single();
+    try {
+      result = await saveStatement({
+        year,
+        month_num: month,
+        month_name: MONTH_NAMES[month],
+        data: {
+          month_year: `${MONTH_NAMES[month].toUpperCase()} ${year}`,
+          ...calc,
+        },
+      });
+    } catch (err) {
+      result = { error: 'Internet connection ka masla. Dobara "Generate Statement" dabayein.' };
     }
 
     if (result.error) {
-      alert('Error: ' + result.error.message);
+      setSaveError(result.error);
       setLoading(false);
       return;
     }
 
-    router.push(`/statement/${result.data.id}`);
+    router.push(`/statement/${result.id}`);
   };
 
   const renderInputRow = (head) => {
@@ -374,6 +361,11 @@ export default function NewStatementClient({ userEmail, school, heads, statement
 
           {/* Submit */}
           <div className="p-6 border-t bg-white rounded-b-lg">
+            {saveError && (
+              <div className="bg-red-50 border-2 border-red-300 text-red-800 px-4 py-3 rounded mb-4 text-sm">
+                ❌ Statement save nahi hua: {saveError}
+              </div>
+            )}
             <button
               type="submit"
               disabled={loading}
